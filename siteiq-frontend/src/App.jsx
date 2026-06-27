@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import MapView from "./components/MapView";
 import SitePanel from "./components/SitePanel";
 import LayersMenu from "./components/LayersMenu";
+import { Analytics } from "@vercel/analytics/next";
 import {
   getElevation, getTerrain, getTerrainProfile,
   getOsmContext, getFloodRisk, getElevationGrid,
