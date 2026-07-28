@@ -231,7 +231,7 @@ export default function SitePanel({
                   recommendation={recommendation}
                   indicators={indicators}
                 />
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
                   <ExportButton
                     pin={pin}
                     radiusM={extent}
@@ -352,7 +352,7 @@ export default function SitePanel({
             <button
               onClick={() => setActiveView("assessment")}
               style={{
-                width: "100%", padding: "8px 10px",
+                width: "100%", padding: "16px 10px",
                 background: "#1f2937", color: "#fff", border: "none",
                 borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer",
               }}
@@ -360,22 +360,24 @@ export default function SitePanel({
               {recommendation ? "View assessment" : "Generate assessment"}
             </button>
 
-            <ExportButton
-              pin={pin}
-              radiusM={extent}
-              floodRisk={floodRisk}
-              soil={soil}
-              climateSolar={climateSolar}
-              user={user}
-              recommendation={recommendation}
-              indicators={indicators}
-              purpose={purpose}
-              elevation={elevation}
-              terrain={terrain}
-              landCover={landCover}
-              osm={osm}
-              onRequestSignIn={onRequestSignIn}
-            />
+            <div style={{ marginTop: 10 }}>
+              <ExportButton
+                pin={pin}
+                radiusM={extent}
+                floodRisk={floodRisk}
+                soil={soil}
+                climateSolar={climateSolar}
+                user={user}
+                recommendation={recommendation}
+                indicators={indicators}
+                purpose={purpose}
+                elevation={elevation}
+                terrain={terrain}
+                landCover={landCover}
+                osm={osm}
+                onRequestSignIn={onRequestSignIn}
+              />
+            </div>
 
             <p style={{ margin: "16px 0 0", fontSize: 10, color: "#9ca3af", lineHeight: 1.5,
               borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
