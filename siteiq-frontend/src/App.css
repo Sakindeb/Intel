@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap');
 
 /* ── Spinner animation ────────────────────────────────────────────────────── */
 @keyframes spin {
@@ -14,7 +14,7 @@
   --color-text:         #111827;
   --color-text-muted:   #6b7280;
   --color-border:       #e5e7eb;
-  --font-body:    'Outfit', system-ui, sans-serif;
+  --font-body:    'Archivo', system-ui, sans-serif;
   --font-mono:    ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --header-h:     52px;
   --footer-h:     32px;

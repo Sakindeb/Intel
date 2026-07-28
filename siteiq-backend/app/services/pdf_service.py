@@ -1,8 +1,10 @@
 import datetime
 import io
 import math
-from typing import Optional
+from typing import Any, Optional
 
+import matplotlib
+matplotlib.use("Agg", force=True)
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import numpy as np
@@ -226,6 +228,163 @@ def generate_topo_pdf(lat: float, lon: float, radius_m: int, title: str) -> byte
     buf = io.BytesIO()
     fig.savefig(buf, format="pdf", dpi=150, bbox_inches="tight")
     plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
+def build_assessment_report_sections(
+    recommendation: Optional[dict] = None,
+    indicators: Optional[dict] = None,
+    purpose: Optional[str] = None,
+    include_factual_data: bool = False,
+    elevation: Optional[dict] = None,
+    terrain: Optional[dict] = None,
+    flood_risk: Optional[dict] = None,
+    soil: Optional[dict] = None,
+    climate_solar: Optional[dict] = None,
+    land_cover: Optional[dict] = None,
+    osm: Optional[dict] = None,
+) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+
+    if recommendation:
+        score = recommendation.get("score", "—")
+        summary = recommendation.get("summary", "—")
+        strengths = recommendation.get("strengths") or []
+        considerations = recommendation.get("considerations") or []
+        actions = recommendation.get("recommendations") or []
+        domain_specific = recommendation.get("domain_specific") or {}
+
+        lines = [
+            f"Purpose: {recommendation.get('purpose_label') or purpose or '—'}",
+            f"Score: {score}/100",
+            f"Summary: {summary}",
+        ]
+        if strengths:
+            lines.append("Strengths:")
+            lines.extend([f"- {item}" for item in strengths])
+        if considerations:
+            lines.append("Considerations:")
+            lines.extend([f"- {item}" for item in considerations])
+        if actions:
+            lines.append("Recommendations:")
+            lines.extend([f"- {item}" for item in actions])
+        if domain_specific.get("recommended_crops"):
+            lines.append("Recommended crops: " + ", ".join(domain_specific["recommended_crops"]))
+        if domain_specific.get("foundation_type_hint"):
+            lines.append("Foundation hint: " + domain_specific["foundation_type_hint"])
+        sections.append({"title": "Assessment Summary", "lines": lines})
+
+    if indicators:
+        lines = []
+        if indicators.get("terrain"):
+            lines.append(f"Terrain: {indicators['terrain']}")
+        if indicators.get("flood"):
+            lines.append(f"Flood: {indicators['flood']}")
+        if indicators.get("soil"):
+            lines.append(f"Soil: {indicators['soil']}")
+        if indicators.get("climate"):
+            lines.append(f"Climate: {indicators['climate']}")
+        if indicators.get("solar"):
+            lines.append(f"Solar: {indicators['solar']}")
+        if indicators.get("land_cover"):
+            lines.append(f"Land cover: {indicators['land_cover']}")
+        if indicators.get("site_context"):
+            lines.append(f"Site context: {indicators['site_context']}")
+        if lines:
+            sections.append({"title": "Indicator Summary", "lines": lines})
+
+    if include_factual_data:
+        lines = []
+        if elevation:
+            lines.append(f"Elevation: {elevation.get('elevation_m', '—')}m")
+        if terrain and terrain.get("point"):
+            p = terrain["point"]
+            lines.append(f"Slope: {p.get('slope_deg', '—')}°")
+            lines.append(f"Aspect: {p.get('aspect_deg', '—')}°")
+        if flood_risk and flood_risk.get("risk"):
+            r = flood_risk["risk"]
+            lines.append(f"Flood risk: {r.get('level', '—').upper()} — {r.get('label', '—')}")
+        if soil and soil.get("texture"):
+            t = soil["texture"]
+            lines.append(f"Soil texture: {t.get('class_name', '—')}")
+        if climate_solar and climate_solar.get("summary"):
+            s = climate_solar["summary"]
+            lines.append(f"Annual rainfall: {s.get('annual_rainfall_mm', '—')}mm")
+            lines.append(f"Solar viability: {s.get('solar_viability', '—')}")
+        if land_cover:
+            lines.append(f"Dominant land cover: {land_cover.get('dominant_label', '—')}")
+        if osm and osm.get("summary"):
+            summary = osm["summary"]
+            lines.append(f"Nearest road: {summary.get('nearest_road_m', '—')}m")
+            lines.append(f"Nearest waterway: {summary.get('nearest_waterway_m', '—')}m")
+        if lines:
+            sections.append({"title": "Factual Data", "lines": lines})
+
+    return sections
+
+
+def generate_assessment_report_pdf(
+    lat: float,
+    lon: float,
+    radius_m: int,
+    title: str,
+    recommendation: Optional[dict] = None,
+    indicators: Optional[dict] = None,
+    purpose: Optional[str] = None,
+    include_factual_data: bool = False,
+    elevation: Optional[dict] = None,
+    terrain: Optional[dict] = None,
+    flood_risk: Optional[dict] = None,
+    soil: Optional[dict] = None,
+    climate_solar: Optional[dict] = None,
+    land_cover: Optional[dict] = None,
+    osm: Optional[dict] = None,
+) -> bytes:
+    buf = io.BytesIO()
+    with PdfPages(buf) as pdf:
+        sections = build_assessment_report_sections(
+            recommendation=recommendation,
+            indicators=indicators,
+            purpose=purpose,
+            include_factual_data=include_factual_data,
+            elevation=elevation,
+            terrain=terrain,
+            flood_risk=flood_risk,
+            soil=soil,
+            climate_solar=climate_solar,
+            land_cover=land_cover,
+            osm=osm,
+        )
+
+        fig = plt.figure(figsize=(11.69, 8.27))
+        ax = fig.add_axes([0.05, 0.08, 0.9, 0.84])
+        ax.axis("off")
+
+        fig.text(0.05, 0.95, title, fontsize=14, fontweight="bold")
+        fig.text(0.05, 0.91, f"Site: {lat:.5f}, {lon:.5f}  ·  Radius: {radius_m}m", fontsize=9, color="#4b5563")
+
+        y = 0.86
+        for section in sections:
+            fig.text(0.05, y, section["title"], fontsize=11, fontweight="bold")
+            y -= 0.05
+            for line in section["lines"]:
+                if y < 0.08:
+                    pdf.savefig(fig, bbox_inches="tight")
+                    plt.close(fig)
+                    fig = plt.figure(figsize=(11.69, 8.27))
+                    ax = fig.add_axes([0.05, 0.08, 0.9, 0.84])
+                    ax.axis("off")
+                    fig.text(0.05, 0.95, title, fontsize=14, fontweight="bold")
+                    y = 0.86
+                fig.text(0.07, y, line, fontsize=8, color="#111827")
+                y -= 0.03
+            y -= 0.02
+
+        fig.text(0.05, 0.04, "Generated by Site Intelligence · Indicative data only", fontsize=7, color="#6b7280")
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
     buf.seek(0)
     return buf.read()
 

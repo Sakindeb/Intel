@@ -12,6 +12,8 @@ import {
   getOsmContext, getFloodRisk, getElevationGrid,
   getClimateSolar, getSoil, getLandCover, getLandUseSuitability,
 } from "./api";
+import { computeIndicators } from "./lib/indicators";
+import { generateRecommendation } from "./lib/recommendations";
 import "./App.css";
 
 const DEFAULT_TOGGLES = {
@@ -38,6 +40,9 @@ export default function App() {
   const [soil,         setSoil]         = useState(null);
   const [landCover,    setLandCover]    = useState(null);
   const [suitability,  setSuitability]  = useState(null);
+  const [purpose,      setPurpose]      = useState("residential");
+  const [indicators,   setIndicators]   = useState(null);
+  const [recommendation, setRecommendation] = useState(null);
   const [toggles,      setToggles]      = useState(DEFAULT_TOGGLES);
   const [extent,       setExtent]       = useState(500);
 
@@ -94,6 +99,7 @@ export default function App() {
     setOsm(null);       setFloodRisk(null); setElevGrid(null);
     setClimateSolar(null); setSoil(null);
     setLandCover(null); setSuitability(null);
+    setIndicators(null); setRecommendation(null);
     setRiskError(false); setOsmError(false);
     setClimateError(false); setSoilError(false); setLcError(false);
 
@@ -158,6 +164,20 @@ export default function App() {
       });
   }, []);
 
+  const handleGenerate = useCallback(() => {
+    const nextIndicators = computeIndicators({
+      terrain,
+      elevation,
+      floodRisk,
+      soil,
+      climateSolar,
+      landCover,
+      osm,
+    });
+    setIndicators(nextIndicators);
+    setRecommendation(generateRecommendation(nextIndicators, purpose));
+  }, [terrain, elevation, floodRisk, soil, climateSolar, landCover, osm, purpose]);
+
   const handlePick = useCallback((lat, lon) => {
     setPin({ lat, lon });
     fetchSite(lat, lon, extent);
@@ -189,6 +209,9 @@ export default function App() {
     setLandCover(data.land_cover  ?? null);
     setOsm(data.osm_context       ?? null);
     setSuitability(null);
+    setIndicators(data.indicators ?? null);
+    setRecommendation(data.recommendation ?? null);
+    setPurpose(data.purpose ?? "residential");
     setElevGrid(null);
 
     // Clear all loading + error states
@@ -228,6 +251,7 @@ export default function App() {
           osm={osm} profile={profile} floodRisk={floodRisk}
           climateSolar={climateSolar} soil={soil}
           landCover={landCover} suitability={suitability}
+          purpose={purpose} indicators={indicators} recommendation={recommendation}
           terrainLoading={terrainLoading} riskLoading={riskLoading}
           osmLoading={osmLoading} climateLoading={climateLoading}
           soilLoading={soilLoading} lcLoading={lcLoading}
@@ -236,6 +260,9 @@ export default function App() {
           toggles={toggles} extent={extent}
           onExtentChange={handleExtentChange}
           onPick={handlePick}
+          onPurposeChange={setPurpose}
+          onGenerate={handleGenerate}
+          onClearRecommendation={() => setRecommendation(null)}
           user={user}
         />
       </div>

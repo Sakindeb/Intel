@@ -16,6 +16,7 @@ function SaveIcon() {
 export default function SaveAnalysis({
   user, pin, elevation, terrain, floodRisk,
   soil, climateSolar, landCover, osm, extent,
+  indicators, recommendation,
 }) {
   const [open,     setOpen]     = useState(false);
   const [siteName, setSiteName] = useState("");
@@ -55,6 +56,8 @@ export default function SaveAnalysis({
         climate_solar: climateSolar,
         land_cover:    landCover,
         osm_context:   osm,
+        indicators,
+        recommendation,
       });
       setStatus("saved");
     } catch (e) {
