@@ -231,7 +231,7 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* Saved analyses drawer — only visible when signed in */}
-          <SavedAnalyses user={user} onLoadAnalysis={handleLoadAnalysis} />
+          <SavedAnalyses user={user} onLoadAnalysis={handleLoadAnalysis} onRequestSignIn={() => setShowSignInModal(true)} />
           <LayersMenu toggles={toggles} onToggle={handleToggle} user={user} />
           <AuthButton user={user} onSignOut={() => { setUser(null); setSession(null); }} />
         </div>
@@ -264,6 +264,7 @@ export default function App() {
           onGenerate={handleGenerate}
           onClearRecommendation={() => setRecommendation(null)}
           user={user}
+          onRequestSignIn={() => setShowSignInModal(true)}
         />
       </div>
 
