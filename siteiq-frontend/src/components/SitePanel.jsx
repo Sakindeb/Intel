@@ -67,7 +67,7 @@ export default function SitePanel({
   purpose, indicators, recommendation,
   terrainLoading, riskLoading, osmLoading, climateLoading, soilLoading, lcLoading,
   riskError, osmError, climateError, soilError, lcError,
-  toggles, extent, onExtentChange, onPick, onPurposeChange, onGenerate, onClearRecommendation, user,
+  toggles, extent, onExtentChange, onPick, onPurposeChange, onGenerate, onClearRecommendation, user, onRequestSignIn,
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeView, setActiveView] = useState("facts");
@@ -246,6 +246,7 @@ export default function SitePanel({
                     terrain={terrain}
                     landCover={landCover}
                     osm={osm}
+                    onRequestSignIn={onRequestSignIn}
                   />
                 </div>
               </>
@@ -373,6 +374,7 @@ export default function SitePanel({
               terrain={terrain}
               landCover={landCover}
               osm={osm}
+              onRequestSignIn={onRequestSignIn}
             />
 
             <p style={{ margin: "16px 0 0", fontSize: 10, color: "#9ca3af", lineHeight: 1.5,
