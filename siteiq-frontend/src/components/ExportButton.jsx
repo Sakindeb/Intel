@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { getAuthHeader } from "../lib/supabase";
+import { saveAnalysis } from "../api";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
@@ -36,12 +37,17 @@ async function downloadPdf(url, filename) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSolar, user, recommendation, indicators, purpose, elevation, terrain, landCover, osm }) {
+export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSolar, user, recommendation, indicators, purpose, elevation, terrain, landCover, osm, onRequestSignIn }) {
   const [open,    setOpen]    = useState(false);
   const [title,   setTitle]   = useState("Site Intelligence Report");
   const [loading, setLoading] = useState(null);
   const [error,   setError]   = useState(null);
   const [includeFactualData, setIncludeFactualData] = useState(true);
+  const [saveMode, setSaveMode] = useState("none");
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const [saveMessage, setSaveMessage] = useState("");
+  const [siteName, setSiteName] = useState("");
+  const [notes, setNotes] = useState("");
 
   if (!pin) return null;
 
@@ -114,6 +120,55 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
     finally { setLoading(null); }
   }
 
+  async function handleSave() {
+    if (!pin) return;
+    if (!user) {
+      setSaveStatus("warning");
+      setSaveMessage("Sign in to save this analysis and access it later.");
+      onRequestSignIn?.();
+      return;
+    }
+    if (!recommendation) {
+      setSaveStatus("warning");
+      setSaveMessage("Generate an assessment first before saving this analysis.");
+      return;
+    }
+
+    if (!siteName.trim()) {
+      setSaveStatus("warning");
+      setSaveMessage("Please enter a site name before saving.");
+      return;
+    }
+
+    setLoading("save"); setError(null); setSaveStatus("saving"); setSaveMessage("");
+    try {
+      await saveAnalysis({
+        site_name: siteName.trim(),
+        notes: notes.trim() || null,
+        lat: pin.lat,
+        lon: pin.lon,
+        radius_m: radiusM,
+        elevation,
+        terrain,
+        flood_risk: floodRisk,
+        soil,
+        climate_solar: climateSolar,
+        land_cover: landCover,
+        osm_context: osm,
+        indicators,
+        recommendation,
+      });
+      setSaveStatus("saved");
+      setSaveMessage("Saved successfully.");
+    } catch (e) {
+      const msg = e?.response?.data?.detail ?? e.message ?? "Unknown error";
+      setSaveStatus("error");
+      setSaveMessage(`Save failed: ${msg}`);
+    } finally {
+      setLoading(null);
+    }
+  }
+
   const btnStyle = (color, disabled) => ({
     display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
     background: disabled ? "#9ca3af" : color, color: "#fff",
@@ -180,9 +235,42 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
             </div>
           )}
 
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 12px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 7 }}>
+            <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>Save options</label>
+            {!user ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#374151", lineHeight: 1.5 }}>
+                  Save this assessment and revisit it later.
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: "#6b7280" }}>
+                  Sign in to unlock saving and access your saved analyses.
+                </p>
+              </div>
+            ) : (
+              <>
+                <label style={{ fontSize: 12, color: "#374151" }}>Site name</label>
+                <input value={siteName} onChange={e => { setSiteName(e.target.value); setSaveStatus("idle"); setSaveMessage(""); }} placeholder="e.g. Wundanyi Plot" style={{ padding: "7px 10px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, fontFamily: "var(--font-body)", outline: "none" }} />
+                <label style={{ fontSize: 12, color: "#374151" }}>Notes (optional)</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="Observations, next steps…" style={{ padding: "7px 10px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, fontFamily: "var(--font-body)", resize: "vertical", outline: "none" }} />
+              </>
+            )}
+            {saveStatus === "warning" && <p style={{ fontSize: 12, color: "#f59e0b", margin: 0 }}>{saveMessage}</p>}
+            {saveStatus === "error" && <p style={{ fontSize: 12, color: "#ef4444", margin: 0 }}>{saveMessage}</p>}
+            {saveStatus === "saved" && <p style={{ fontSize: 12, color: "#22c55e", margin: 0 }}>{saveMessage}</p>}
+            <button onClick={handleSave} disabled={!!loading} style={btnStyle("#1f2937", !!loading)}>
+              {loading === "save" ? <Spinner /> : <DownloadIcon />}
+              <div>
+                <div>{user ? "Save analysis" : "Sign in to save"}</div>
+                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>
+                  {user ? "Save the assessment with factual site data" : "Create an account to save and revisit this analysis"}
+                </div>
+              </div>
+            </button>
+          </div>
+
           {error && <p style={{ fontSize: 12, color: "#ef4444", margin: 0 }}>{error}</p>}
 
-          <button onClick={() => { setOpen(false); setError(null); }} style={{
+          <button onClick={() => { setOpen(false); setError(null); setSaveStatus("idle"); setSaveMessage(""); }} style={{
             padding: "7px", background: "#f3f4f6", color: "#6b7280",
             border: "1px solid #e5e7eb", borderRadius: 6,
             fontSize: 12, fontFamily: "var(--font-body)", cursor: "pointer",

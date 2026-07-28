@@ -10,7 +10,6 @@ import LandCoverCard from "./LandCoverCard";
 import ExtentSelector from "./ExtentSelector";
 import ExportButton from "./ExportButton";
 import LocationSearch from "./LocationSearch";
-import SaveAnalysis from "./SaveAnalysis";
 import IndicatorSummary from "./IndicatorSummary";
 import PurposeSelector from "./PurposeSelector";
 import SuitabilityPanel from "./SuitabilityPanel";
@@ -68,7 +67,7 @@ export default function SitePanel({
   purpose, indicators, recommendation,
   terrainLoading, riskLoading, osmLoading, climateLoading, soilLoading, lcLoading,
   riskError, osmError, climateError, soilError, lcError,
-  toggles, extent, onExtentChange, onPick, onPurposeChange, onGenerate, onClearRecommendation, user,
+  toggles, extent, onExtentChange, onPick, onPurposeChange, onGenerate, onClearRecommendation, user, onRequestSignIn,
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [activeView, setActiveView] = useState("facts");
@@ -254,6 +253,7 @@ export default function SitePanel({
                     terrain={terrain}
                     landCover={landCover}
                     osm={osm}
+                    onRequestSignIn={onRequestSignIn}
                   />
                 </div>
               </>
@@ -356,15 +356,6 @@ export default function SitePanel({
               )}
             </Section>
 
-            {/* Save analysis — only when signed in */}
-            <SaveAnalysis
-              user={user} pin={pin} elevation={elevation}
-              terrain={terrain} floodRisk={floodRisk}
-              soil={soil} climateSolar={climateSolar}
-              landCover={landCover} osm={osm} extent={extent}
-              indicators={indicators} recommendation={recommendation}
-            />
-
             <button
               onClick={() => setActiveView("assessment")}
               style={{
@@ -390,6 +381,7 @@ export default function SitePanel({
               terrain={terrain}
               landCover={landCover}
               osm={osm}
+              onRequestSignIn={onRequestSignIn}
             />
 
             <p style={{ margin: "16px 0 0", fontSize: 10, color: "#9ca3af", lineHeight: 1.5,

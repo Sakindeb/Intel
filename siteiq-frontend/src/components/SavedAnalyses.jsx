@@ -111,7 +111,7 @@ function AnalysisRow({ analysis, onLoad, onDelete }) {
   );
 }
 
-export default function SavedAnalyses({ user, onLoadAnalysis }) {
+export default function SavedAnalyses({ user, onLoadAnalysis, onRequestSignIn }) {
   const [open,     setOpen]     = useState(false);
   const [analyses, setAnalyses] = useState([]);
   const [loading,  setLoading]  = useState(false);
@@ -149,13 +149,19 @@ export default function SavedAnalyses({ user, onLoadAnalysis }) {
     setAnalyses(prev => prev.filter(a => a.id !== deletedId));
   }
 
-  if (!user) return null;
+  function handleOpen() {
+    if (!user) {
+      onRequestSignIn?.();
+      return;
+    }
+    setOpen(true);
+  }
 
   return (
     <>
       {/* Header trigger */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         title="My saved analyses"
         style={{
           display: "flex", alignItems: "center", gap: 6,
@@ -175,7 +181,7 @@ export default function SavedAnalyses({ user, onLoadAnalysis }) {
       </button>
 
       {/* Drawer */}
-      {open && (
+      {open && user && (
         <div
           onClick={() => setOpen(false)}
           style={{
