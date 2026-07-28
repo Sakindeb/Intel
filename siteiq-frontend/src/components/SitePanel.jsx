@@ -10,7 +10,6 @@ import LandCoverCard from "./LandCoverCard";
 import ExtentSelector from "./ExtentSelector";
 import ExportButton from "./ExportButton";
 import LocationSearch from "./LocationSearch";
-import SaveAnalysis from "./SaveAnalysis";
 import IndicatorSummary from "./IndicatorSummary";
 import PurposeSelector from "./PurposeSelector";
 import SuitabilityPanel from "./SuitabilityPanel";
@@ -233,13 +232,6 @@ export default function SitePanel({
                   indicators={indicators}
                 />
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <SaveAnalysis
-                    user={user} pin={pin} elevation={elevation}
-                    terrain={terrain} floodRisk={floodRisk}
-                    soil={soil} climateSolar={climateSolar}
-                    landCover={landCover} osm={osm} extent={extent}
-                    indicators={indicators} recommendation={recommendation}
-                  />
                   <ExportButton
                     pin={pin}
                     radiusM={extent}
@@ -355,15 +347,6 @@ export default function SitePanel({
                 </>
               )}
             </Section>
-
-            {/* Save analysis — only when signed in */}
-            <SaveAnalysis
-              user={user} pin={pin} elevation={elevation}
-              terrain={terrain} floodRisk={floodRisk}
-              soil={soil} climateSolar={climateSolar}
-              landCover={landCover} osm={osm} extent={extent}
-              indicators={indicators} recommendation={recommendation}
-            />
 
             <button
               onClick={() => setActiveView("assessment")}
