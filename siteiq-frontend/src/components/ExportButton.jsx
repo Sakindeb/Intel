@@ -36,11 +36,12 @@ async function downloadPdf(url, filename) {
   URL.revokeObjectURL(link.href);
 }
 
-export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSolar, user }) {
+export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSolar, user, recommendation, indicators, purpose, elevation, terrain, landCover, osm }) {
   const [open,    setOpen]    = useState(false);
   const [title,   setTitle]   = useState("Site Intelligence Report");
   const [loading, setLoading] = useState(null);
   const [error,   setError]   = useState(null);
+  const [includeFactualData, setIncludeFactualData] = useState(true);
 
   if (!pin) return null;
 
@@ -55,8 +56,8 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
     finally { setLoading(null); }
   }
 
-  async function handleReport() {
-    setLoading("report"); setError(null);
+  async function handleSiteDataReport() {
+    setLoading("site-data"); setError(null);
     try {
       const headers = await getAuthHeader();
       const resp = await fetch(`${API_BASE}/site-report-pdf`, {
@@ -73,10 +74,43 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
       const blob = await resp.blob();
       const link = document.createElement("a");
       link.href  = URL.createObjectURL(blob);
-      link.download = `site_report_${safeName}.pdf`;
+      link.download = `site_data_${safeName}.pdf`;
       link.click();
       URL.revokeObjectURL(link.href);
-    } catch (e) { setError(`Report failed: ${e.message}`); }
+    } catch (e) { setError(`Site data export failed: ${e.message}`); }
+    finally { setLoading(null); }
+  }
+
+  async function handleAssessmentReport() {
+    setLoading("assessment"); setError(null);
+    try {
+      const headers = await getAuthHeader();
+      const resp = await fetch(`${API_BASE}/assessment-report-pdf`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({
+          lat: pin.lat, lon: pin.lon, radius_m: radiusM, title,
+          recommendation: recommendation ?? null,
+          indicators: indicators ?? null,
+          purpose: purpose ?? null,
+          include_factual_data: includeFactualData,
+          elevation: elevation ?? null,
+          terrain: terrain ?? null,
+          flood_risk: floodRisk ?? null,
+          soil: soil ?? null,
+          climate_solar: climateSolar ?? null,
+          land_cover: landCover ?? null,
+          osm: osm ?? null,
+        }),
+      });
+      if (!resp.ok) throw new Error(`${resp.status}`);
+      const blob = await resp.blob();
+      const link = document.createElement("a");
+      link.href  = URL.createObjectURL(blob);
+      link.download = `assessment_report_${safeName}.pdf`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (e) { setError(`Assessment export failed: ${e.message}`); }
     finally { setLoading(null); }
   }
 
@@ -105,26 +139,33 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
             fontSize: 13, fontFamily: "var(--font-body)", outline: "none", width: "100%",
           }} />
 
-          <button onClick={handleTopo} disabled={!!loading} style={btnStyle("#1f2937", !!loading)}>
-            {loading === "topo" ? <Spinner /> : <DownloadIcon />}
+          <button onClick={handleSiteDataReport} disabled={!!loading} style={btnStyle("#1f2937", !!loading)}>
+            {loading === "site-data" ? <Spinner /> : <DownloadIcon />}
             <div>
-              <div>Topographic Map PDF</div>
+              <div>Site data export</div>
               <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>
-                1 page · contours, OSM, scale bar, north arrow
+                Full site report data · terrain + flood + soil + climate + solar + context
               </div>
             </div>
           </button>
 
           {user ? (
-            <button onClick={handleReport} disabled={!!loading} style={btnStyle("#374151", !!loading)}>
-              {loading === "report" ? <Spinner /> : <DownloadIcon />}
-              <div>
-                <div>Full Site Report PDF</div>
-                <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>
-                  4 pages · topo + terrain + flood/soil + climate/solar
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>Assessment export options</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#374151" }}>
+                <input type="checkbox" checked={includeFactualData} onChange={e => setIncludeFactualData(e.target.checked)} />
+                Include factual data in the assessment report
+              </label>
+              <button onClick={handleAssessmentReport} disabled={!!loading} style={btnStyle("#374151", !!loading)}>
+                {loading === "assessment" ? <Spinner /> : <DownloadIcon />}
+                <div>
+                  <div>Assessment report export</div>
+                  <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>
+                    Includes the assessment card summary and optional factual site data
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+            </div>
           ) : (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -132,8 +173,8 @@ export default function ExportButton({ pin, radiusM, floodRisk, soil, climateSol
               border: "1px dashed #e5e7eb", borderRadius: 7,
             }}>
               <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "#374151" }}>Full Site Report PDF</p>
-                <p style={{ margin: 0, fontSize: 10, color: "#9ca3af" }}>Sign in to unlock · 4 pages</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: "#374151" }}>Assessment report export</p>
+                <p style={{ margin: 0, fontSize: 10, color: "#9ca3af" }}>Sign in to unlock · assessment summary PDF</p>
               </div>
               <span style={{ fontSize: 16 }}>🔒</span>
             </div>

@@ -5,7 +5,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import Response
 
-from app.services.pdf_service import generate_site_report_pdf, generate_topo_pdf
+from app.services.pdf_service import generate_assessment_report_pdf, generate_site_report_pdf, generate_topo_pdf
 from app.utils.cache import cache
 
 router = APIRouter()
@@ -78,6 +78,48 @@ def post_site_report_pdf(payload: Dict[str, Any] = Body(...)):
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="site_report_{round(lat,4)}_{round(lon,4)}.pdf"'},
+    )
+
+
+@router.post("/assessment-report-pdf", response_class=Response)
+def post_assessment_report_pdf(payload: Dict[str, Any] = Body(...)):
+    lat = payload.get("lat")
+    lon = payload.get("lon")
+    radius_m = payload.get("radius_m", 500)
+    title = payload.get("title", "Assessment Report")
+    recommendation = payload.get("recommendation")
+    indicators = payload.get("indicators")
+    purpose = payload.get("purpose")
+    include_factual_data = bool(payload.get("include_factual_data", False))
+
+    if lat is None or lon is None:
+        raise HTTPException(status_code=422, detail="lat and lon are required")
+
+    try:
+        pdf_bytes = generate_assessment_report_pdf(
+            lat,
+            lon,
+            radius_m,
+            title,
+            recommendation=recommendation,
+            indicators=indicators,
+            purpose=purpose,
+            include_factual_data=include_factual_data,
+            elevation=payload.get("elevation"),
+            terrain=payload.get("terrain"),
+            flood_risk=payload.get("flood_risk"),
+            soil=payload.get("soil"),
+            climate_solar=payload.get("climate_solar"),
+            land_cover=payload.get("land_cover"),
+            osm=payload.get("osm"),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Assessment report error: {exc}")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="assessment_report_{round(lat,4)}_{round(lon,4)}.pdf"'},
     )
 
 

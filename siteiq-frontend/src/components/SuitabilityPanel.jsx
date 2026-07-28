@@ -1,4 +1,3 @@
-import { useState } from "react";
 import IndicatorSummary from "./IndicatorSummary";
 
 const SCORE_COLOR = (s) =>
@@ -52,29 +51,7 @@ function Tag({ text, type }) {
   );
 }
 
-function Accordion({ title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div style={{ borderTop: "1px solid #e5e7eb" }}>
-      <div
-        onClick={() => setOpen(v => !v)}
-        style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "10px 0", cursor: "pointer",
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{title}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d={open ? "M2 8L6 4L10 8" : "M2 4L6 8L10 4"}
-            stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-      {open && <div style={{ paddingBottom: 14 }}>{children}</div>}
-    </div>
-  );
-}
-
-export default function SuitabilityPanel({ recommendation, indicators, purpose, onReset, fullDataChildren }) {
+export default function SuitabilityPanel({ recommendation, indicators }) {
   if (!recommendation) return null;
 
   const { score, summary, strengths = [], considerations = [], recommendations: actions = [], domain_specific } = recommendation;
@@ -174,28 +151,6 @@ export default function SuitabilityPanel({ recommendation, indicators, purpose, 
 
       {/* ── Environmental summary (indicators) ── */}
       <IndicatorSummary indicators={indicators} />
-
-      {/* ── Full data accordion ── */}
-      {fullDataChildren && (
-        <div style={{ marginTop: 14 }}>
-          <Accordion title="Full Data ▶  raw measurements and charts">
-            {fullDataChildren}
-          </Accordion>
-        </div>
-      )}
-
-      {/* ── Reset button ── */}
-      <button
-        onClick={onReset}
-        style={{
-          marginTop: 14, width: "100%", padding: "8px",
-          background: "#f3f4f6", color: "#374151",
-          border: "1px solid #e5e7eb", borderRadius: 7,
-          fontSize: 12, fontFamily: "var(--font-body)", cursor: "pointer",
-        }}
-      >
-        ← Change domain / view raw data
-      </button>
     </div>
   );
 }
