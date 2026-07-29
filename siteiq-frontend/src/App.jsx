@@ -119,10 +119,10 @@ export default function App() {
       setTerrainLoading(false);
 
       // Show sign-in prompt once per session after first real results
-      if (!user && !hasPrompted.current) {
-        hasPrompted.current = true;
-        setTimeout(() => setShowSignInModal(true), 1500); // small delay feels natural
-      }
+      // if (!user && !hasPrompted.current) {
+      //   hasPrompted.current = true;
+      //   setTimeout(() => setShowSignInModal(true), 1500); // small delay feels natural
+      // }
     });
 
     // Elevation grid (contours — silent)
