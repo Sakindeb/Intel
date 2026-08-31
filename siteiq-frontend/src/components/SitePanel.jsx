@@ -41,6 +41,46 @@ function OsmGroup({ title, items, renderItem }) {
   );
 }
 
+function CategoryGroup({ icon, title, description, children }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{
+      borderTop: "1px solid #e5e7eb",
+      marginTop: 16,
+    }}>
+      <div onClick={() => setOpen(v => !v)} style={{
+        display: "flex", alignItems: "flex-start", gap: 12,
+        padding: "12px 0", cursor: "pointer",
+        userSelect: "none",
+      }}>
+        <span style={{ fontSize: 18, marginTop: 2 }}>{icon}</span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+            {title}
+          </div>
+          {description && (
+            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, lineHeight: 1.4 }}>
+              {description}
+            </div>
+          )}
+        </div>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{
+          flexShrink: 0, marginTop: 3, color: "#9ca3af",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          transition: "transform 0.2s"
+        }}>
+          <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {open && (
+        <div style={{ marginLeft: 30, paddingBottom: 8 }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Item({ primary, secondary }) {
   return (
     <p style={{ margin: "3px 0", fontSize: 12 }}>
@@ -98,87 +138,173 @@ export default function SitePanel({
 
   const fullDataContent = (
     <div>
-      <Section title="Terrain" summary={summaries.terrain(elevation, terrain)}
-        loading={terrainLoading} loadingText="Fetching elevation and slope…" defaultOpen={true}>
-        <div className="stat-grid">
-          <div className="stat">
-            <span className="stat-label">Elevation</span>
-            <span className="stat-value">{elevation?.elevation_m ?? "—"} m</span>
+      <div style={{ marginBottom: 8, paddingBottom: 4 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+          🗺️ SITE CONTEXT
+        </h3>
+      </div>
+
+      {/* ⛰️ PHYSICAL ENVIRONMENT */}
+      <CategoryGroup
+        icon="⛰️"
+        title="Physical Environment"
+        description="Terrain, elevation, slope and soils"
+      >
+        <Section title="Terrain" summary={summaries.terrain(elevation, terrain)}
+          loading={terrainLoading} loadingText="Fetching elevation and slope…" defaultOpen={true}>
+          <div className="stat-grid">
+            <div className="stat">
+              <span className="stat-label">Elevation</span>
+              <span className="stat-value">{elevation?.elevation_m ?? "—"} m</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Slope</span>
+              <span className="stat-value">{terrain?.point?.slope_deg?.toFixed(1) ?? "—"}°</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Aspect</span>
+              <span className="stat-value">{terrain?.point?.aspect_deg?.toFixed(0) ?? "—"}°</span>
+            </div>
           </div>
-          <div className="stat">
-            <span className="stat-label">Slope</span>
-            <span className="stat-value">{terrain?.point?.slope_deg?.toFixed(1) ?? "—"}°</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Aspect</span>
-            <span className="stat-value">{terrain?.point?.aspect_deg?.toFixed(0) ?? "—"}°</span>
-          </div>
-        </div>
-        {terrain?.point?.slope_class && <p className="callout">{terrain.point.slope_class}</p>}
-        {terrain?.site_buffer && (
-          <div className="site-buffer">
-            <h3>Within {terrain.site_buffer.radius_m}m</h3>
-            <p>Elevation {terrain.site_buffer.elevation_min_m?.toFixed(0)}–{terrain.site_buffer.elevation_max_m?.toFixed(0)} m</p>
-            <p>Avg slope {terrain.site_buffer.slope_mean_deg?.toFixed(1)}°, max {terrain.site_buffer.slope_max_deg?.toFixed(1)}°</p>
-          </div>
-        )}
-        {profile && toggles.terrainProfile && <ElevationProfileChart profile={profile} />}
-      </Section>
+          {terrain?.point?.slope_class && <p className="callout">{terrain.point.slope_class}</p>}
+          {terrain?.site_buffer && (
+            <div className="site-buffer">
+              <h3>Within {terrain.site_buffer.radius_m}m</h3>
+              <p>Elevation {terrain.site_buffer.elevation_min_m?.toFixed(0)}–{terrain.site_buffer.elevation_max_m?.toFixed(0)} m</p>
+              <p>Avg slope {terrain.site_buffer.slope_mean_deg?.toFixed(1)}°, max {terrain.site_buffer.slope_max_deg?.toFixed(1)}°</p>
+            </div>
+          )}
+          {profile && toggles.terrainProfile && <ElevationProfileChart profile={profile} />}
+        </Section>
 
-      <Section title="Flood Risk" summary={summaries.risk(floodRisk)}
-        loading={riskLoading} loadingText="Computing HAND flood model…" error={riskError}>
-        <FloodRiskCard floodRisk={floodRisk} />
-      </Section>
+        <Section title="Soil Properties" summary={summaries.soil(soil)}
+          loading={soilLoading} loadingText="Querying iSDAsoil…" error={soilError}>
+          <SoilCard soil={soil} />
+        </Section>
+      </CategoryGroup>
 
-      <Section title="Soil Properties" summary={summaries.soil(soil)}
-        loading={soilLoading} loadingText="Querying iSDAsoil…" error={soilError}>
-        <SoilCard soil={soil} />
-      </Section>
+      {/* 🌦️ CLIMATE & EXTREMES */}
+      <CategoryGroup
+        icon="🌦️"
+        title="Climate & Extremes"
+        description="Rainfall, temperature and climate anomalies"
+      >
+        <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
+          loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
+          <ClimateChart climate={climateSolar} />
+        </Section>
 
-      <Section title="Land Cover" summary={summaries.lc(landCover)}
-        loading={lcLoading} loadingText="Fetching ESA WorldCover…" error={lcError}>
-        <LandCoverCard landCover={landCover} suitability={suitability} />
-      </Section>
+        <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
+          loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
+          <SolarCard climate={climateSolar} />
+        </Section>
+      </CategoryGroup>
 
-      <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
-        loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-        <ClimateChart climate={climateSolar} />
-      </Section>
+      {/* 💧 WATER & FLOODING */}
+      <CategoryGroup
+        icon="💧"
+        title="Water & Flooding"
+        description="Waterways, flood risk and water stress"
+      >
+        <Section title="Flood Risk" summary={summaries.risk(floodRisk)}
+          loading={riskLoading} loadingText="Computing HAND flood model…" error={riskError}>
+          <FloodRiskCard floodRisk={floodRisk} />
+        </Section>
 
-      <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
-        loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-        <SolarCard climate={climateSolar} />
-      </Section>
-
-      <Section title="Site Context" summary={summaries.osm(osm)}
-        loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
-        {osm && (
-          <>
-            {floodFlag && (
-              <p style={{ margin: "0 0 10px", padding: "7px 10px", background: "#fef2f2",
-                borderLeft: "3px solid #ef4444", borderRadius: "0 6px 6px 0", fontSize: 12, color: "#b91c1c" }}>
-                Waterway within 300m — see Flood Risk above.
+        <Section title="Waterways" summary={osm?.summary ? `${osm.summary.nearest_waterway_m ?? "—"}m away` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
+            <>
+              {floodFlag && (
+                <p style={{ margin: "0 0 10px", padding: "7px 10px", background: "#fef2f2",
+                  borderLeft: "3px solid #ef4444", borderRadius: "0 6px 6px 0", fontSize: 12, color: "#b91c1c" }}>
+                  Waterway within 300m — elevated flood risk.
+                </p>
+              )}
+              <p className="section-label" style={{ marginBottom: 0 }}>
+                Within {(osm.search_radius_m / 1000).toFixed(1)}km
               </p>
-            )}
-            <p className="section-label" style={{ marginBottom: 0 }}>
-              Within {(osm.search_radius_m / 1000).toFixed(1)}km
-            </p>
-            <OsmGroup title="Roads" items={osm.roads}
-              renderItem={(r, i) => <Item key={i} primary={r.name} secondary={`${r.type} · ${r.distance_m}m`} />} />
-            <OsmGroup title="Waterways" items={osm.waterways}
-              renderItem={(w, i) => <Item key={i} primary={w.name} secondary={`${w.type} · ${w.distance_m}m`} />} />
-            <OsmGroup title="Amenities" items={osm.amenities}
-              renderItem={(a, i) => <Item key={i} primary={a.name} secondary={`${a.amenity} · ${a.distance_m}m`} />} />
+              <OsmGroup title="Waterways" items={osm.waterways}
+                renderItem={(w, i) => <Item key={i} primary={w.name} secondary={`${w.type} · ${w.distance_m}m`} />} />
+            </>
+          )}
+        </Section>
+      </CategoryGroup>
+
+      {/* 🌿 LAND & ECOSYSTEM */}
+      <CategoryGroup
+        icon="🌿"
+        title="Land & Ecosystem"
+        description="Vegetation, land cover and green infrastructure"
+      >
+        <Section title="Land Cover" summary={summaries.lc(landCover)}
+          loading={lcLoading} loadingText="Fetching ESA WorldCover…" error={lcError}>
+          <LandCoverCard landCover={landCover} suitability={suitability} />
+        </Section>
+
+        <Section title="Vegetation & Land Use" summary={osm?.summary ? `${osm.summary.amenity_count ?? 0} features` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
+            <>
+              <p className="section-label" style={{ marginBottom: 0 }}>
+                Within {(osm.search_radius_m / 1000).toFixed(1)}km
+              </p>
+              <OsmGroup title="Vegetation / Land use" items={osm.vegetation ?? []}
+                renderItem={(v, i) => <Item key={i} primary={v.name || v.type} secondary={`${v.raw_tag} · ${v.distance_m}m`} />} />
+            </>
+          )}
+        </Section>
+      </CategoryGroup>
+
+      {/* 🏙️ PEOPLE & INFRASTRUCTURE */}
+      <CategoryGroup
+        icon="🏙️"
+        title="People & Infrastructure"
+        description="Population, buildings, roads and critical services"
+      >
+        <Section title="Roads" summary={osm?.summary ? `Nearest: ${osm.summary.nearest_road_m ?? "—"}m` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
+            <>
+              <p className="section-label" style={{ marginBottom: 0 }}>
+                Within {(osm.search_radius_m / 1000).toFixed(1)}km
+              </p>
+              <OsmGroup title="Roads" items={osm.roads}
+                renderItem={(r, i) => <Item key={i} primary={r.name} secondary={`${r.type} · ${r.distance_m}m`} />} />
+            </>
+          )}
+        </Section>
+
+        <Section title="Buildings" summary={osm?.buildings?.length ? `${osm.buildings.length} nearby` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
             <OsmGroup title="Buildings" items={osm.buildings ?? []}
               renderItem={(b, i) => <Item key={i} primary={b.name || b.type} secondary={`${b.distance_m}m`} />} />
-            <OsmGroup title="Vegetation / Land use" items={osm.vegetation ?? []}
-              renderItem={(v, i) => <Item key={i} primary={v.name || v.type} secondary={`${v.raw_tag} · ${v.distance_m}m`} />} />
+          )}
+        </Section>
+
+        <Section title="Amenities & Services" summary={osm?.summary ? `${osm.summary.amenity_count ?? 0} nearby` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
+            <>
+              <p className="section-label" style={{ marginBottom: 0 }}>
+                Within {(osm.search_radius_m / 1000).toFixed(1)}km
+              </p>
+              <OsmGroup title="Amenities" items={osm.amenities}
+                renderItem={(a, i) => <Item key={i} primary={a.name} secondary={`${a.amenity} · ${a.distance_m}m`} />} />
+            </>
+          )}
+        </Section>
+
+        <Section title="Power Infrastructure" summary={osm?.power?.length ? `${osm.power.length} facilities` : null}
+          loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+          {osm && (
             <OsmGroup title="Power infrastructure" items={osm.power ?? []}
               renderItem={(p, i) => <Item key={i} primary={p.type}
                 secondary={p.voltage ? `${p.voltage}V · ${p.distance_m}m` : `${p.distance_m}m`} />} />
-          </>
-        )}
-      </Section>
+          )}
+        </Section>
+      </CategoryGroup>
     </div>
   );
 
@@ -260,94 +386,172 @@ export default function SitePanel({
             <LocationSearch onSelect={onPick} variant="panel" />
             <ExtentSelector value={extent} onChange={onExtentChange} />
 
-            {/* ── Terrain ── */}
-            <Section title="Terrain" summary={summaries.terrain(elevation, terrain)}
-              loading={terrainLoading} loadingText="Fetching elevation and slope…" defaultOpen={true}>
-              <div className="stat-grid">
-                <div className="stat">
-                  <span className="stat-label">Elevation</span>
-                  <span className="stat-value">{elevation?.elevation_m ?? "—"} m</span>
+            <div style={{ marginTop: 8, paddingBottom: 4 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+                🗺️ SITE CONTEXT
+              </h3>
+            </div>
+
+            {/*  PHYSICAL ENVIRONMENT */}
+            <CategoryGroup
+              
+              title="Physical Environment"
+              description="Terrain, elevation, slope and soils"
+            >
+              <Section title="Terrain" summary={summaries.terrain(elevation, terrain)}
+                loading={terrainLoading} loadingText="Fetching elevation and slope…" defaultOpen={true}>
+                <div className="stat-grid">
+                  <div className="stat">
+                    <span className="stat-label">Elevation</span>
+                    <span className="stat-value">{elevation?.elevation_m ?? "—"} m</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Slope</span>
+                    <span className="stat-value">{terrain?.point?.slope_deg?.toFixed(1) ?? "—"}°</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Aspect</span>
+                    <span className="stat-value">{terrain?.point?.aspect_deg?.toFixed(0) ?? "—"}°</span>
+                  </div>
                 </div>
-                <div className="stat">
-                  <span className="stat-label">Slope</span>
-                  <span className="stat-value">{terrain?.point?.slope_deg?.toFixed(1) ?? "—"}°</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Aspect</span>
-                  <span className="stat-value">{terrain?.point?.aspect_deg?.toFixed(0) ?? "—"}°</span>
-                </div>
-              </div>
-              {terrain?.point?.slope_class && <p className="callout">{terrain.point.slope_class}</p>}
-              {terrain?.site_buffer && (
-                <div className="site-buffer">
-                  <h3>Within {terrain.site_buffer.radius_m}m</h3>
-                  <p>Elevation {terrain.site_buffer.elevation_min_m?.toFixed(0)}–{terrain.site_buffer.elevation_max_m?.toFixed(0)} m</p>
-                  <p>Avg slope {terrain.site_buffer.slope_mean_deg?.toFixed(1)}°, max {terrain.site_buffer.slope_max_deg?.toFixed(1)}°</p>
-                </div>
-              )}
-              {profile && toggles.terrainProfile && <ElevationProfileChart profile={profile} />}
-            </Section>
+                {terrain?.point?.slope_class && <p className="callout">{terrain.point.slope_class}</p>}
+                {terrain?.site_buffer && (
+                  <div className="site-buffer">
+                    <h3>Within {terrain.site_buffer.radius_m}m</h3>
+                    <p>Elevation {terrain.site_buffer.elevation_min_m?.toFixed(0)}–{terrain.site_buffer.elevation_max_m?.toFixed(0)} m</p>
+                    <p>Avg slope {terrain.site_buffer.slope_mean_deg?.toFixed(1)}°, max {terrain.site_buffer.slope_max_deg?.toFixed(1)}°</p>
+                  </div>
+                )}
+                {profile && toggles.terrainProfile && <ElevationProfileChart profile={profile} />}
+              </Section>
 
-            {/* ── Flood Risk ── */}
-            <Section title="Flood Risk" summary={summaries.risk(floodRisk)}
-              loading={riskLoading} loadingText="Computing HAND flood model…" error={riskError}>
-              <FloodRiskCard floodRisk={floodRisk} />
-            </Section>
+              <Section title="Soil Properties" summary={summaries.soil(soil)}
+                loading={soilLoading} loadingText="Querying iSDAsoil…" error={soilError}>
+                <SoilCard soil={soil} />
+              </Section>
+            </CategoryGroup>
 
-            {/* ── Soil ── */}
-            <Section title="Soil Properties" summary={summaries.soil(soil)}
-              loading={soilLoading} loadingText="Querying iSDAsoil…" error={soilError}>
-              <SoilCard soil={soil} />
-            </Section>
+            {/* 🌦️ CLIMATE & EXTREMES */}
+            <CategoryGroup
+              
+              title="Climate & Extremes"
+              description="Rainfall, temperature and climate anomalies"
+            >
+              <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
+                loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
+                <ClimateChart climate={climateSolar} />
+              </Section>
 
-            {/* ── Land Cover ── */}
-            <Section title="Land Cover" summary={summaries.lc(landCover)}
-              loading={lcLoading} loadingText="Fetching ESA WorldCover…" error={lcError}>
-              <LandCoverCard landCover={landCover} suitability={suitability} />
-            </Section>
+              <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
+                loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
+                <SolarCard climate={climateSolar} />
+              </Section>
+            </CategoryGroup>
 
-            {/* ── Climate ── */}
-            <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
-              loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-              <ClimateChart climate={climateSolar} />
-            </Section>
+            {/* 💧 WATER & FLOODING */}
+            <CategoryGroup
+              
+              title="Water & Flooding"
+              description="Waterways, flood risk and water stress"
+            >
+              <Section title="Flood Risk" summary={summaries.risk(floodRisk)}
+                loading={riskLoading} loadingText="Computing HAND flood model…" error={riskError}>
+                <FloodRiskCard floodRisk={floodRisk} />
+              </Section>
 
-            {/* ── Solar ── */}
-            <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
-              loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-              <SolarCard climate={climateSolar} />
-            </Section>
-
-            {/* ── OSM Context ── */}
-            <Section title="Site Context" summary={summaries.osm(osm)}
-              loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
-              {osm && (
-                <>
-                  {floodFlag && (
-                    <p style={{ margin: "0 0 10px", padding: "7px 10px", background: "#fef2f2",
-                      borderLeft: "3px solid #ef4444", borderRadius: "0 6px 6px 0", fontSize: 12, color: "#b91c1c" }}>
-                      Waterway within 300m — see Flood Risk above.
+              <Section title="Waterways" summary={osm?.summary ? `${osm.summary.nearest_waterway_m ?? "—"}m away` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
+                  <>
+                    {floodFlag && (
+                      <p style={{ margin: "0 0 10px", padding: "7px 10px", background: "#fef2f2",
+                        borderLeft: "3px solid #ef4444", borderRadius: "0 6px 6px 0", fontSize: 12, color: "#b91c1c" }}>
+                        Waterway within 300m — elevated flood risk.
+                      </p>
+                    )}
+                    <p className="section-label" style={{ marginBottom: 0 }}>
+                      Within {(osm.search_radius_m / 1000).toFixed(1)}km
                     </p>
-                  )}
-                  <p className="section-label" style={{ marginBottom: 0 }}>
-                    Within {(osm.search_radius_m / 1000).toFixed(1)}km
-                  </p>
-                  <OsmGroup title="Roads" items={osm.roads}
-                    renderItem={(r, i) => <Item key={i} primary={r.name} secondary={`${r.type} · ${r.distance_m}m`} />} />
-                  <OsmGroup title="Waterways" items={osm.waterways}
-                    renderItem={(w, i) => <Item key={i} primary={w.name} secondary={`${w.type} · ${w.distance_m}m`} />} />
-                  <OsmGroup title="Amenities" items={osm.amenities}
-                    renderItem={(a, i) => <Item key={i} primary={a.name} secondary={`${a.amenity} · ${a.distance_m}m`} />} />
+                    <OsmGroup title="Waterways" items={osm.waterways}
+                      renderItem={(w, i) => <Item key={i} primary={w.name} secondary={`${w.type} · ${w.distance_m}m`} />} />
+                  </>
+                )}
+              </Section>
+            </CategoryGroup>
+
+            {/* 🌿 LAND & ECOSYSTEM */}
+            <CategoryGroup
+             
+              title="Land & Ecosystem"
+              description="Vegetation, land cover and green infrastructure"
+            >
+              <Section title="Land Cover" summary={summaries.lc(landCover)}
+                loading={lcLoading} loadingText="Fetching ESA WorldCover…" error={lcError}>
+                <LandCoverCard landCover={landCover} suitability={suitability} />
+              </Section>
+
+              <Section title="Vegetation & Land Use" summary={osm?.summary ? `${osm.summary.amenity_count ?? 0} features` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
+                  <>
+                    <p className="section-label" style={{ marginBottom: 0 }}>
+                      Within {(osm.search_radius_m / 1000).toFixed(1)}km
+                    </p>
+                    <OsmGroup title="Vegetation / Land use" items={osm.vegetation ?? []}
+                      renderItem={(v, i) => <Item key={i} primary={v.name || v.type} secondary={`${v.raw_tag} · ${v.distance_m}m`} />} />
+                  </>
+                )}
+              </Section>
+            </CategoryGroup>
+
+            {/* 🏙️ PEOPLE & INFRASTRUCTURE */}
+            <CategoryGroup
+              title="People & Infrastructure"
+              description="Population, buildings, roads and critical services"
+            >
+              <Section title="Roads" summary={osm?.summary ? `Nearest: ${osm.summary.nearest_road_m ?? "—"}m` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
+                  <>
+                    <p className="section-label" style={{ marginBottom: 0 }}>
+                      Within {(osm.search_radius_m / 1000).toFixed(1)}km
+                    </p>
+                    <OsmGroup title="Roads" items={osm.roads}
+                      renderItem={(r, i) => <Item key={i} primary={r.name} secondary={`${r.type} · ${r.distance_m}m`} />} />
+                  </>
+                )}
+              </Section>
+
+              <Section title="Buildings" summary={osm?.buildings?.length ? `${osm.buildings.length} nearby` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
                   <OsmGroup title="Buildings" items={osm.buildings ?? []}
                     renderItem={(b, i) => <Item key={i} primary={b.name || b.type} secondary={`${b.distance_m}m`} />} />
-                  <OsmGroup title="Vegetation / Land use" items={osm.vegetation ?? []}
-                    renderItem={(v, i) => <Item key={i} primary={v.name || v.type} secondary={`${v.raw_tag} · ${v.distance_m}m`} />} />
+                )}
+              </Section>
+
+              <Section title="Amenities & Services" summary={osm?.summary ? `${osm.summary.amenity_count ?? 0} nearby` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
+                  <>
+                    <p className="section-label" style={{ marginBottom: 0 }}>
+                      Within {(osm.search_radius_m / 1000).toFixed(1)}km
+                    </p>
+                    <OsmGroup title="Amenities" items={osm.amenities}
+                      renderItem={(a, i) => <Item key={i} primary={a.name} secondary={`${a.amenity} · ${a.distance_m}m`} />} />
+                  </>
+                )}
+              </Section>
+
+              <Section title="Power Infrastructure" summary={osm?.power?.length ? `${osm.power.length} facilities` : null}
+                loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
+                {osm && (
                   <OsmGroup title="Power infrastructure" items={osm.power ?? []}
                     renderItem={(p, i) => <Item key={i} primary={p.type}
                       secondary={p.voltage ? `${p.voltage}V · ${p.distance_m}m` : `${p.distance_m}m`} />} />
-                </>
-              )}
-            </Section>
+                )}
+              </Section>
+            </CategoryGroup>
 
             <button
               onClick={() => setActiveView("assessment")}

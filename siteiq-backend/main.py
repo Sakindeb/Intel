@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import climate, flood, health, landcover, osm, report, soil, terrain, auth, sites, analyses
+from app.api import climate, flood, health, landcover, osm, report, soil, terrain, auth, sites, analyses, zone
 from app.dependencies import CORS_ALLOW_ORIGIN_REGEX
 
 app = FastAPI(title="Site Intelligence API")
@@ -24,3 +24,4 @@ app.include_router(landcover.router)
 app.include_router(auth.router)
 app.include_router(sites.router)
 app.include_router(analyses.router)
+app.include_router(zone.router)

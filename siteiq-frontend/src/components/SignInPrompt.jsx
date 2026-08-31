@@ -17,6 +17,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 
+
 function GoogleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
@@ -28,11 +29,18 @@ function GoogleIcon() {
   );
 }
 
+import {
+  CircleCheckBig,
+  FileText,
+  Map,
+  FolderOpen,
+} from "lucide-react";
+
 const PERKS = [
-  { icon: "💾", label: "Save analyses and revisit them any time" },
-  { icon: "📄", label: "Export full 4-page site reports as PDF" },
-  { icon: "🗺️", label: "Unlock infrastructure and land cover overlays" },
-  { icon: "🏠", label: "Manage multiple sites in one place" },
+  { icon: <CircleCheckBig />, label: "Save analyses and revisit them any time" },
+  { icon: <FileText />, label: "Export full 4-page site reports as PDF" },
+  { icon: <Map />, label: "Unlock infrastructure and land cover overlays" },
+  { icon: <FolderOpen />, label: "Manage multiple sites in one place" },
 ];
 
 function SignInButton({ label = "Sign in with Google", size = "md" }) {
@@ -181,7 +189,7 @@ export function SignInCTA({ onDismiss }) {
         ×
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 15 }}></span>
+        <span style={{ fontSize: 15 }}>{<CircleCheckBig />}</span>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#111827" }}>
           Create a free account to unlock all features.
         </p>
