@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 import requests
 
 from app.utils.geometry import haversine_m
+from app.utils.cache import cache
 from app.utils.helpers import (
     AMENITY_GROUPS,
     BUILDING_TYPES,
@@ -247,3 +248,22 @@ def fetch_osm_context(lat: float, lon: float, radius_m: int = OSM_RADIUS_M) -> d
         "buildings":  buildings,
         "vegetation": vegetation,
     }
+
+def get_osm_context_cached(lat: float, lon: float, radius_m: int = OSM_RADIUS_M) -> dict:
+    """
+    Cache-aware wrapper around fetch_osm_context. Shared by the /osm-context
+    route and the environmental_constraints orchestrator so both draw from
+    the same cache entry instead of independently hitting Overpass for the
+    same site. Raises requests.RequestException on a genuine fetch failure —
+    callers decide how to handle that.
+    """
+    key = f"osm:{round(lat, 4)}:{round(lon, 4)}:{radius_m}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    data = fetch_osm_context(lat, lon, radius_m)
+
+    payload = {"lat": lat, "lon": lon, **data}
+    cache.set(key, payload, expire=OSM_CACHE_TTL)
+    return payload

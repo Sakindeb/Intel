@@ -6,7 +6,7 @@ NASA_POWER_MONTHLY_URL = "https://power.larc.nasa.gov/api/temporal/monthly/point
 # Climatology endpoint: no dates needed, returns long-term monthly means
 NASA_POWER_CLIM_URL    = "https://power.larc.nasa.gov/api/temporal/climatology/point"
 
-NASA_POWER_VARS  = "PRECTOTCORR,T2M_MAX,T2M_MIN,ALLSKY_SFC_SW_DWN"
+NASA_POWER_VARS  = "PRECTOTCORR,T2M_MAX,T2M_MIN,ALLSKY_SFC_SW_DWN,T2M"
 MONTH_LABELS     = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 MONTHS_3L        = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"]
 
@@ -51,6 +51,7 @@ def _build_response(vars_by_month: dict, period: str) -> dict:
     vars_by_month: keys = NASA var names, values = list[float] length 12 (Jan–Dec)
     """
     rainfall  = [round(v, 1) for v in vars_by_month["PRECTOTCORR"]]
+    temp_mean = [round(v, 1) for v in vars_by_month["T2M"]]
     temp_max  = [round(v, 1) for v in vars_by_month["T2M_MAX"]]
     temp_min  = [round(v, 1) for v in vars_by_month["T2M_MIN"]]
     solar_ghi = [round(v, 2) for v in vars_by_month["ALLSKY_SFC_SW_DWN"]]
@@ -61,6 +62,7 @@ def _build_response(vars_by_month: dict, period: str) -> dict:
             {
                 "month":       MONTH_LABELS[i],
                 "rainfall_mm": rainfall[i],
+                "temp_mean_c":  temp_mean[i],
                 "temp_max_c":  temp_max[i],
                 "temp_min_c":  temp_min[i],
                 "solar_ghi":   solar_ghi[i],
@@ -171,3 +173,13 @@ def fetch_climate_solar(lat: float, lon: float) -> dict:
             raise RuntimeError(
                 f"Monthly endpoint: {monthly_err} | Climatology fallback: {clim_err}"
             ) from clim_err
+
+def get_holdridge_inputs(lat: float, lon: float) -> tuple[list[float], float]:
+    """
+    Returns (monthly_mean_temps_c, annual_precip_mm) for the piedcrow-land-kb
+    Holdridge classifier. Reuses fetch_climate_solar.
+    """
+    data = fetch_climate_solar(lat, lon)
+    monthly_mean_temps_c = [m["temp_mean_c"] for m in data["monthly"]]
+    annual_precip_mm = data["summary"]["annual_rainfall_mm"]
+    return monthly_mean_temps_c, annual_precip_mm

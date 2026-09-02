@@ -36,6 +36,9 @@ ISDA_TEX = ee.Image("ISDASOIL/Africa/v1/texture_class").select("texture_0_20")
 # ESA WorldCover 10m — land cover classification
 ESA_LC = ee.ImageCollection("ESA/WorldCover/v200").first().select("Map")
 
+# WDPA — World Database on Protected Areas, polygon boundaries
+WDPA_POLYGONS = ee.FeatureCollection("WCMC/WDPA/current/polygons")
+
 
 def fetch_elevation(lat: float, lon: float):
     point = ee.Geometry.Point([lon, lat])
