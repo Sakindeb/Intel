@@ -6,6 +6,8 @@ const LAYERS = [
   { key: "terrainProfile",  label: "Terrain Profile",    description: "N–S / E–W transect arms",         gated: false },
   { key: "contours",        label: "Elevation Contours", description: "DEM-derived contour lines",       gated: false },
   { key: "landCover",       label: "Land Cover",         description: "ESA WorldCover 10m overlay",     gated: true  },
+  { key: "rainfall",        label: "Rainfall",           description: "CHIRPS 5-year mean annual rainfall", gated: false },
+  { key: "temperature",     label: "Temperature",        description: "MODIS 5-year mean daytime LST",      gated: false },
 
 ];
 

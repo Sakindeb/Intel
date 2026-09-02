@@ -4,8 +4,6 @@ import Section from "./Section";
 import ElevationProfileChart from "./ElevationProfileChart";
 import FloodRiskCard from "./FloodRiskCard";
 import SoilCard from "./SoilCard";
-import ClimateChart from "./ClimateChart";
-import SolarCard from "./SolarCard";
 import LandCoverCard from "./LandCoverCard";
 import ExtentSelector from "./ExtentSelector";
 import ExportButton from "./ExportButton";
@@ -55,18 +53,17 @@ const summaries = {
   terrain:   (elev, terrain) => [elev?.elevation_m != null ? `${elev.elevation_m}m` : null, terrain?.point?.slope_class].filter(Boolean).join(" · ") || null,
   risk:      (fr)  => fr?.risk ? `${(fr.risk.level ?? "").toUpperCase()} · ${fr.risk.label ?? ""}` : null,
   soil:      (s)   => s?.texture ? s.texture.class_name : null,
-  climate:   (c)   => c?.summary ? `${c.summary.annual_rainfall_mm}mm/yr · ${c.summary.wet_months?.length ?? 0} wet months` : null,
-  solar:     (c)   => c?.summary ? `${(c.summary.solar_viability ?? "").toUpperCase()} · ${c.summary.annual_solar_ghi} kWh/m²/day` : null,
   lc:        (lc)  => lc?.dominant_label ? `Dominant: ${lc.dominant_label}` : null,
+  temperature: (t) => t?.mean_temperature_c != null ? `${Number(t.mean_temperature_c).toFixed(1)}°C mean${t.maximum_temperature_c != null ? ` · ${Number(t.maximum_temperature_c).toFixed(1)}°C max` : ""}` : null,
   osm:       (o)   => o?.summary ? `Road ${o.summary.nearest_road_m ?? "—"}m · ${o.summary.amenity_count ?? 0} amenities` : null,
 };
 
 export default function SitePanel({
   pin, elevation, terrain, osm, profile, floodRisk,
-  climateSolar, soil, landCover, suitability,
+  climateData, temperatureData, soil, landCover, suitability,
   purpose, indicators, recommendation,
-  terrainLoading, riskLoading, osmLoading, climateLoading, soilLoading, lcLoading,
-  riskError, osmError, climateError, soilError, lcError,
+  terrainLoading, riskLoading, osmLoading, climateLoading, soilLoading, lcLoading, temperatureLoading,
+  riskError, osmError, climateError, soilError, lcError, temperatureError,
   toggles, extent, onExtentChange, onPick, onPurposeChange, onGenerate, onClearRecommendation, user, onRequestSignIn,
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -140,14 +137,76 @@ export default function SitePanel({
         <LandCoverCard landCover={landCover} suitability={suitability} />
       </Section>
 
-      <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
-        loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-        <ClimateChart climate={climateSolar} />
+      <Section title="Climate Context"
+        loading={climateLoading} loadingText="Analyzing rainfall conditions…" error={climateError}>
+        <div className="stat-grid">
+          <div className="stat">
+            <span className="stat-label">Average annual rainfall</span>
+            <span className="stat-value">
+              {climateData?.annual_rainfall_mm != null
+                ? `${Number(climateData.annual_rainfall_mm).toFixed(0)} mm/yr`
+                : "—"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Analysis period</span>
+            <span className="stat-value">
+              {climateData?.period_years != null
+                ? `${climateData.period_years} years`
+                : "—"}
+            </span>
+          </div>
+        </div>
+
+        {climateData?.dataset && (
+          <p className="callout">
+            Source: {climateData.dataset} · average annual rainfall around the selected site.
+          </p>
+        )}
+
+        {!climateData && !climateLoading && !climateError && (
+          <p className="callout">Rainfall conditions will appear after analysis.</p>
+        )}
       </Section>
 
-      <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
-        loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-        <SolarCard climate={climateSolar} />
+      <Section title="Temperature" summary={summaries.temperature(temperatureData)}
+        loading={temperatureLoading} loadingText="Analyzing daytime land surface temperature…" error={temperatureError}>
+        <div className="stat-grid">
+          <div className="stat">
+            <span className="stat-label">Mean daytime LST</span>
+            <span className="stat-value">
+              {temperatureData?.mean_temperature_c != null
+                ? `${Number(temperatureData.mean_temperature_c).toFixed(1)} °C`
+                : "—"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Maximum daytime LST</span>
+            <span className="stat-value">
+              {temperatureData?.maximum_temperature_c != null
+                ? `${Number(temperatureData.maximum_temperature_c).toFixed(1)} °C`
+                : "—"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Analysis period</span>
+            <span className="stat-value">
+              {temperatureData?.period_years != null
+                ? `${temperatureData.period_years} years`
+                : "—"}
+            </span>
+          </div>
+        </div>
+
+        {temperatureData?.dataset && (
+          <p className="callout">
+            Source: {temperatureData.dataset} · daytime land surface temperature · ~{temperatureData.resolution_m ?? 1000}m resolution.
+          </p>
+        )}
+
+        {!temperatureData && !temperatureLoading && !temperatureError && (
+          <p className="callout">Temperature conditions will appear after analysis.</p>
+        )}
       </Section>
 
       <Section title="Site Context" summary={summaries.osm(osm)}
@@ -237,7 +296,7 @@ export default function SitePanel({
                     radiusM={extent}
                     floodRisk={floodRisk}
                     soil={soil}
-                    climateSolar={climateSolar}
+                    climateSolar={climateData}
                     user={user}
                     recommendation={recommendation}
                     indicators={indicators}
@@ -306,20 +365,81 @@ export default function SitePanel({
               <LandCoverCard landCover={landCover} suitability={suitability} />
             </Section>
 
-            {/* ── Climate ── */}
-            <Section title="Rainfall & Temperature" summary={summaries.climate(climateSolar)}
-              loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-              <ClimateChart climate={climateSolar} />
-            </Section>
+            {/* ── Climate Context ── */}
+            <Section title="Climate Context"
+              loading={climateLoading} loadingText="Analyzing rainfall conditions…" error={climateError}>
+              <div className="stat-grid">
+                <div className="stat">
+                  <span className="stat-label">Average annual rainfall</span>
+                  <span className="stat-value">
+                    {climateData?.annual_rainfall_mm != null
+                      ? `${Number(climateData.annual_rainfall_mm).toFixed(0)} mm/yr`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Analysis period</span>
+                  <span className="stat-value">
+                    {climateData?.period_years != null
+                      ? `${climateData.period_years} years`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
 
-            {/* ── Solar ── */}
-            <Section title="Solar Potential" summary={summaries.solar(climateSolar)}
-              loading={climateLoading} loadingText="Fetching NASA POWER data…" error={climateError}>
-              <SolarCard climate={climateSolar} />
+              {climateData?.dataset && (
+                <p className="callout">
+                  Source: {climateData.dataset} · average annual rainfall around the selected site.
+                </p>
+              )}
+
+              {!climateData && !climateLoading && !climateError && (
+                <p className="callout">Rainfall conditions will appear after analysis.</p>
+              )}
             </Section>
 
             {/* ── OSM Context ── */}
-            <Section title="Site Context" summary={summaries.osm(osm)}
+            <Section title="Temperature" summary={summaries.temperature(temperatureData)}
+        loading={temperatureLoading} loadingText="Analyzing daytime land surface temperature…" error={temperatureError}>
+        <div className="stat-grid">
+          <div className="stat">
+            <span className="stat-label">Mean daytime LST</span>
+            <span className="stat-value">
+              {temperatureData?.mean_temperature_c != null
+                ? `${Number(temperatureData.mean_temperature_c).toFixed(1)} °C`
+                : "—"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Maximum daytime LST</span>
+            <span className="stat-value">
+              {temperatureData?.maximum_temperature_c != null
+                ? `${Number(temperatureData.maximum_temperature_c).toFixed(1)} °C`
+                : "—"}
+            </span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">Analysis period</span>
+            <span className="stat-value">
+              {temperatureData?.period_years != null
+                ? `${temperatureData.period_years} years`
+                : "—"}
+            </span>
+          </div>
+        </div>
+
+        {temperatureData?.dataset && (
+          <p className="callout">
+            Source: {temperatureData.dataset} · daytime land surface temperature · ~{temperatureData.resolution_m ?? 1000}m resolution.
+          </p>
+        )}
+
+        {!temperatureData && !temperatureLoading && !temperatureError && (
+          <p className="callout">Temperature conditions will appear after analysis.</p>
+        )}
+      </Section>
+
+      <Section title="Site Context" summary={summaries.osm(osm)}
               loading={osmLoading} loadingText="Querying OpenStreetMap…" error={osmError}>
               {osm && (
                 <>
@@ -366,7 +486,7 @@ export default function SitePanel({
                 radiusM={extent}
                 floodRisk={floodRisk}
                 soil={soil}
-                climateSolar={climateSolar}
+                climateSolar={climateData}
                 user={user}
                 recommendation={recommendation}
                 indicators={indicators}

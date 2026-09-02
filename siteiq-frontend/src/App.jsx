@@ -10,7 +10,7 @@ import { supabase } from "./lib/supabase";
 import {
   getElevation, getTerrain, getTerrainProfile,
   getOsmContext, getFloodRisk, getElevationGrid,
-  getClimateSolar, getSoil, getLandCover, getLandUseSuitability,
+  getRainfall, getRainfallMap, getTemperature, getTemperatureMap, getSoil, getLandCover, getLandUseSuitability,
 } from "./api";
 import { computeIndicators } from "./lib/indicators";
 import { generateRecommendation } from "./lib/recommendations";
@@ -23,6 +23,8 @@ const DEFAULT_TOGGLES = {
   contours:        false,
   landCover:       false,
   soilMap:         false,
+  rainfall:        false,
+  temperature:     false,
 };
 
 const settle = (p, tag) =>
@@ -36,7 +38,10 @@ export default function App() {
   const [osm,          setOsm]          = useState(null);
   const [floodRisk,    setFloodRisk]    = useState(null);
   const [elevGrid,     setElevGrid]     = useState(null);
-  const [climateSolar, setClimateSolar] = useState(null);
+  const [climateData, setClimateData] = useState(null);
+  const [rainfallMap, setRainfallMap] = useState(null);
+  const [temperatureData, setTemperatureData] = useState(null);
+  const [temperatureMap, setTemperatureMap] = useState(null);
   const [soil,         setSoil]         = useState(null);
   const [landCover,    setLandCover]    = useState(null);
   const [suitability,  setSuitability]  = useState(null);
@@ -81,6 +86,7 @@ export default function App() {
   const [climateLoading, setClimateLoading] = useState(false);
   const [soilLoading,    setSoilLoading]    = useState(false);
   const [lcLoading,      setLcLoading]      = useState(false);
+  const [temperatureLoading, setTemperatureLoading] = useState(false);
 
   // Per-section errors
   const [riskError,    setRiskError]    = useState(false);
@@ -88,6 +94,7 @@ export default function App() {
   const [climateError, setClimateError] = useState(false);
   const [soilError,    setSoilError]    = useState(false);
   const [lcError,      setLcError]      = useState(false);
+  const [temperatureError, setTemperatureError] = useState(false);
 
   const handleToggle = useCallback((key) => {
     setToggles(prev => ({ ...prev, [key]: !prev[key] }));
@@ -97,15 +104,16 @@ export default function App() {
     // Reset
     setElevation(null); setTerrain(null);  setProfile(null);
     setOsm(null);       setFloodRisk(null); setElevGrid(null);
-    setClimateSolar(null); setSoil(null);
+    setClimateData(null); setRainfallMap(null);
+    setTemperatureData(null); setTemperatureMap(null); setSoil(null);
     setLandCover(null); setSuitability(null);
     setIndicators(null); setRecommendation(null);
     setRiskError(false); setOsmError(false);
-    setClimateError(false); setSoilError(false); setLcError(false);
+    setClimateError(false); setSoilError(false); setLcError(false); setTemperatureError(false);
 
     setTerrainLoading(true); setRiskLoading(true);
     setOsmLoading(true);     setClimateLoading(true);
-    setSoilLoading(true);    setLcLoading(true);
+    setSoilLoading(true);    setLcLoading(true); setTemperatureLoading(true);
 
     // ── Wave 1: terrain ──────────────────────────────────────────
     Promise.allSettled([
@@ -135,8 +143,23 @@ export default function App() {
     settle(getSoil(lat, lon), "soil")
       .then(d => { setSoil(d); if (!d) setSoilError(true); setSoilLoading(false); });
 
-    settle(getClimateSolar(lat, lon), "climate")
-      .then(d => { setClimateSolar(d); if (!d) setClimateError(true); setClimateLoading(false); });
+    settle(getRainfall(lat, lon, radiusM), "rainfall")
+      .then(d => {
+        setClimateData(d);
+        if (!d) setClimateError(true);
+        setClimateLoading(false);
+      });
+
+    // CHIRPS rainfall map tile
+    settle(getRainfallMap(lat, lon, radiusM), "rainfall-map")
+      .then(d => setRainfallMap(d));
+
+    // MODIS daytime land surface temperature statistics + map tile
+    settle(getTemperature(lat, lon, radiusM), "temperature")
+      .then(d => { setTemperatureData(d); if (!d) setTemperatureError(true); setTemperatureLoading(false); });
+
+    settle(getTemperatureMap(lat, lon, radiusM), "temperature-map")
+      .then(d => setTemperatureMap(d));
 
     // Land cover + suitability together
     settle(getLandCover(lat, lon, radiusM), "landcover")
@@ -170,13 +193,13 @@ export default function App() {
       elevation,
       floodRisk,
       soil,
-      climateSolar,
+      climateSolar: climateData,
       landCover,
       osm,
     });
     setIndicators(nextIndicators);
     setRecommendation(generateRecommendation(nextIndicators, purpose));
-  }, [terrain, elevation, floodRisk, soil, climateSolar, landCover, osm, purpose]);
+  }, [terrain, elevation, floodRisk, soil, climateData, landCover, osm, purpose]);
 
   const handlePick = useCallback((lat, lon) => {
     setPin({ lat, lon });
@@ -205,7 +228,7 @@ export default function App() {
     setProfile(null);                          // profile not saved — will re-fetch if needed
     setFloodRisk(data.flood_risk  ?? null);
     setSoil(data.soil             ?? null);
-    setClimateSolar(data.climate_solar ?? null);
+    setClimateData(data.climate_solar ?? null);
     setLandCover(data.land_cover  ?? null);
     setOsm(data.osm_context       ?? null);
     setSuitability(null);
@@ -243,20 +266,22 @@ export default function App() {
             pin={pin} osm={osm} terrain={terrain}
             profile={profile} elevGrid={elevGrid}
             toggles={toggles} extent={extent}
+            climateData={climateData} rainfallMap={rainfallMap}
+            temperatureData={temperatureData} temperatureMap={temperatureMap}
             onPick={handlePick}
           />
         </div>
         <SitePanel
           pin={pin} elevation={elevation} terrain={terrain}
           osm={osm} profile={profile} floodRisk={floodRisk}
-          climateSolar={climateSolar} soil={soil}
+          climateData={climateData} temperatureData={temperatureData} soil={soil}
           landCover={landCover} suitability={suitability}
           purpose={purpose} indicators={indicators} recommendation={recommendation}
           terrainLoading={terrainLoading} riskLoading={riskLoading}
           osmLoading={osmLoading} climateLoading={climateLoading}
-          soilLoading={soilLoading} lcLoading={lcLoading}
+          soilLoading={soilLoading} lcLoading={lcLoading} temperatureLoading={temperatureLoading}
           riskError={riskError} osmError={osmError}
-          climateError={climateError} soilError={soilError} lcError={lcError}
+          climateError={climateError} soilError={soilError} lcError={lcError} temperatureError={temperatureError}
           toggles={toggles} extent={extent}
           onExtentChange={handleExtentChange}
           onPick={handlePick}

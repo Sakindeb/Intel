@@ -5,6 +5,8 @@ from app.api import climate, flood, health, landcover, osm, report, soil, terrai
 from app.dependencies import CORS_ALLOW_ORIGIN_REGEX
 from app.api.sentinel2 import router as sentinel2_router
 
+from app.api.climate import router as climate_router
+
 app = FastAPI(title="Site Intelligence API")
 
 app.add_middleware(
@@ -25,4 +27,6 @@ app.include_router(landcover.router)
 app.include_router(auth.router)
 app.include_router(sites.router)
 app.include_router(analyses.router)
+
 app.include_router(sentinel2_router)
+app.include_router(climate_router)

@@ -8,6 +8,7 @@ import LocationControl from "./LocationControl";
 import ContourLayer from "./ContourLayer";
 import LandCoverOverlay from "./LandCoverOverlay";
 import { SoilImageLayer, SoilControls } from "./SoilMapOverlay";
+import TemperatureOverlay from "./TemperatureOverlay";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -45,6 +46,64 @@ function FlyToPin({ pin }) {
   return null;
 }
 
+
+function RainfallOverlay({ pin, rainfallMap, extent }) {
+  if (!pin || !rainfallMap?.tile_url) return null;
+
+  const rainfall = Number(rainfallMap?.annual_rainfall_mm ?? rainfallMap?.rainfall_mm);
+  const fillColor = !Number.isFinite(rainfall)
+    ? "#3b82f6"
+    : rainfall < 400
+      ? "#dbeafe"
+      : rainfall < 800
+        ? "#93c5fd"
+        : rainfall < 1200
+          ? "#60a5fa"
+          : rainfall < 1600
+            ? "#2563eb"
+            : "#1e3a8a";
+
+  return (
+    <>
+      <TileLayer
+        key={`${pin.lat}-${pin.lon}-${extent ?? 500}-${rainfallMap.tile_url}`}
+        url={rainfallMap.tile_url}
+        opacity={0.55}
+        attribution="CHIRPS rainfall · UCSB-CHG"
+      />
+      <Circle
+        center={[pin.lat, pin.lon]}
+        radius={rainfallMap.radius_m ?? extent ?? 500}
+        pathOptions={{
+          color: fillColor,
+          fillColor,
+          fillOpacity: 0.10,
+          weight: 2,
+          dashArray: "6 4",
+        }}
+      />
+    </>
+  );
+}
+
+function TemperatureLegend({ temperatureMap, temperatureData }) {
+  if (!temperatureMap?.tile_url) return null;
+  return (
+    <div style={{ position: "absolute", right: 12, bottom: 12, zIndex: 1000, background: "rgba(255,255,255,0.94)", padding: "10px 12px", borderRadius: 8, boxShadow: "0 1px 6px rgba(0,0,0,0.2)", fontSize: 12, lineHeight: 1.35, minWidth: 175 }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>Daytime land surface temperature (°C)</div>
+      <div style={{ height: 8, borderRadius: 3, marginBottom: 4, background: "linear-gradient(to right, #313695, #74add1, #ffffbf, #f46d43, #a50026)" }} />
+      <div style={{ display: "flex", justifyContent: "space-between" }}><span>{temperatureMap.min_c ?? 15}</span><span>{temperatureMap.max_c ?? 40}</span></div>
+      {temperatureData && (
+        <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px solid #e5e7eb" }}>
+          <div><strong>Mean:</strong> {Number.isFinite(Number(temperatureData.mean_temperature_c)) ? `${Number(temperatureData.mean_temperature_c).toFixed(2)}°C` : "—"}</div>
+          <div><strong>Maximum:</strong> {Number.isFinite(Number(temperatureData.maximum_temperature_c)) ? `${Number(temperatureData.maximum_temperature_c).toFixed(2)}°C` : "—"}</div>
+        </div>
+      )}
+      <div style={{ marginTop: 5, opacity: 0.7 }}>MODIS MOD11A2.061 · 5-year mean · ~1 km</div>
+    </div>
+  );
+}
+
 function ElevationBufferOverlay({ pin, terrain }) {
   if (!pin || !terrain?.site_buffer) return null;
   return (
@@ -76,7 +135,7 @@ function TerrainProfileOverlay({ pin, profile }) {
   );
 }
 
-export default function MapView({ pin, osm, terrain, profile, elevGrid, toggles, extent, onPick }) {
+export default function MapView({ pin, osm, terrain, profile, elevGrid, toggles, extent, climateData, rainfallMap, temperatureData, temperatureMap, onPick }) {
   const center = pin ? [pin.lat, pin.lon] : [-1.2833, 36.8167];  // Nairobi, Kenya
 
   // soilLayer state lives here so it can be shared between
@@ -101,6 +160,10 @@ export default function MapView({ pin, osm, terrain, profile, elevGrid, toggles,
         <FlyToPin pin={pin} />
         {pin && <Marker position={[pin.lat, pin.lon]} />}
 
+        {/* Rainfall — CHIRPS 5-year average annual rainfall raster */}
+        {toggles.rainfall && <RainfallOverlay pin={pin} rainfallMap={rainfallMap} extent={extent} />}
+        {toggles.temperature && <TemperatureOverlay pin={pin} temperatureMap={temperatureMap} extent={extent} />}
+
         {/* Terrain */}
         {toggles.elevationBuffer && <ElevationBufferOverlay pin={pin} terrain={terrain} />}
         {toggles.terrainProfile  && <TerrainProfileOverlay pin={pin} profile={profile} />}
@@ -123,6 +186,30 @@ export default function MapView({ pin, osm, terrain, profile, elevGrid, toggles,
 
       {/* OSM legend */}
       {osm && toggles.osmContext && <OsmLegend />}
+
+      {rainfallMap?.tile_url && pin && toggles.rainfall && (
+        <div style={{
+          position: "absolute", right: 12, bottom: toggles.temperature ? 150 : 12, zIndex: 1000,
+          background: "rgba(255,255,255,0.94)", padding: "10px 12px",
+          borderRadius: 8, boxShadow: "0 1px 6px rgba(0,0,0,0.2)",
+          fontSize: 12, lineHeight: 1.35, minWidth: 155,
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Annual rainfall (mm)</div>
+          <div style={{ display: "flex", height: 8, borderRadius: 3, overflow: "hidden", marginBottom: 4 }}>
+            {["#dbeafe", "#93c5fd", "#60a5fa", "#2563eb", "#1e3a8a"].map((c, i) => (
+              <span key={i} style={{ flex: 1, background: c }} />
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>0</span><span>400</span><span>800</span><span>1200</span><span>1600+</span>
+          </div>
+          <div style={{ marginTop: 5, opacity: 0.7 }}>CHIRPS · 5-year mean</div>
+        </div>
+      )}
+
+      {temperatureMap?.tile_url && pin && toggles.temperature && (
+        <TemperatureLegend temperatureMap={temperatureMap} temperatureData={temperatureData} />
+      )}
     </div>
   );
 }
