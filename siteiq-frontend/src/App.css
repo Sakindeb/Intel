@@ -198,6 +198,7 @@ body {
   background: var(--color-surface);
   padding: 16px;
   z-index: 5;
+  position: relative;
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
