@@ -1,0 +1,25 @@
+id: osm.overpass
+dataset: "OpenStreetMap (via Overpass API)"
+variable: "Vector features (roads, buildings, water, land use) selected by tag"
+producer: "OpenStreetMap contributors"
+access_url: "https://wiki.openstreetmap.org/wiki/Overpass_API"
+license: "ODbL 1.0 (attribution required; share-alike applies to derived databases)"
+version: "Live: rolling database, no fixed version"
+spatial_extent: global
+spatial_resolution: "Vector; positional accuracy and completeness vary by region"
+crs: "EPSG:4326"
+temporal_coverage: "Continuously updated"
+temporal_resolution: live
+units: "Vector geometries and tags"
+bands_variables: []
+limitations:
+  - "Completeness varies strongly by region and feature type; rural areas are often less complete than urban ones"
+  - "Tagging is inconsistent between contributors"
+  - "Public Overpass servers enforce rate limits and timeouts"
+  - "Results change over time, so the query time must be recorded for reproducibility"
+confidence: medium
+confidence_rationale: "Useful for context and proximity screening, but absence of a feature in OSM is not evidence it is absent on the ground."
+provenance: "Data (c) OpenStreetMap contributors, available under the Open Database License."
+lineage: "Overpass query for site buffer -> feature counts and distances -> proximity indicators"
+siteintel_indicator: []   # TODO: fill from your services
+research_question: []     # TODO: map to Section 1 research questions

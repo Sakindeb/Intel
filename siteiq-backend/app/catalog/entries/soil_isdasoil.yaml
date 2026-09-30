@@ -1,0 +1,29 @@
+id: soil.isdasoil
+dataset: "iSDAsoil"
+# VERIFY: which properties and depth layers your service actually uses.
+variable: "Soil properties (e.g. pH, organic carbon, clay, sand, silt, bedrock depth) at 0-20 cm and 20-50 cm"
+producer: "iSDA (Innovative Solutions for Decision Agriculture Ltd)"
+access_url: "https://www.isda-africa.com/isdasoil/"
+# VERIFY: license terms.
+license: "CC BY 4.0"
+version: "v1"
+spatial_extent: africa
+spatial_resolution: "30m"
+crs: "EPSG:4326"
+temporal_coverage: "Static prediction (covariates from roughly 2001-2017)"
+temporal_resolution: static
+# VERIFY: some bands are stored scaled or log-transformed in the GEE asset and need back-transforming per the provider docs.
+units: "Varies by property; some values are stored transformed and must be back-transformed"
+bands_variables: []   # TODO: list the exact bands your service reads
+limitations:
+  - "Machine-learning predictions, not measurements"
+  - "Uncertainty is higher where training samples are sparse"
+  - "Only two depth layers (0-20 cm and 20-50 cm)"
+  - "Static: does not reflect soil change after the model period"
+  - "Africa only"
+confidence: medium
+confidence_rationale: "Best available continent-wide 30 m soil product, but modelled values carry uncertainty that varies by location. Use the provider's uncertainty layers where available."
+provenance: "Hengl et al. (2021), African soil properties and nutrients mapped at 30 m spatial resolution using two-scale ensemble machine learning, Scientific Reports."
+lineage: "iSDAsoil GEE assets -> sample at site -> back-transform values -> soil indicators"
+siteintel_indicator: []   # TODO: fill from your services
+research_question: []     # TODO: map to Section 1 research questions

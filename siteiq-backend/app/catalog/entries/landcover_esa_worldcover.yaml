@@ -1,0 +1,27 @@
+id: landcover.esa_worldcover
+dataset: "ESA WorldCover"
+variable: "Map band (land cover class)"
+producer: "European Space Agency (ESA) WorldCover consortium"
+access_url: "https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v200"
+license: "CC BY 4.0"
+version: "v200"
+spatial_extent: global
+spatial_resolution: "10m"
+crs: "EPSG:4326"
+temporal_coverage: "2021 (single-year map)"
+temporal_resolution: static
+units: "categorical class codes"
+bands_variables: [Map]
+# VERIFY: accuracy figure against the ESA validation report before publishing.
+accuracy: "Provider-reported global overall accuracy of about 77% for v200"
+limitations:
+  - "Single-year snapshot (2021): cannot show land cover change on its own"
+  - "Eleven broad classes: no crop type or seasonal distinction"
+  - "Class accuracy varies by region and landscape; weaker in heterogeneous or transitional areas"
+confidence: high
+confidence_rationale: "Documented, validated 10 m global product. Single year and broad classes limit use for change detection and fine-scale detail."
+# VERIFY: exact citation and DOI from the ESA product page.
+provenance: "ESA WorldCover 10 m 2021 v200 (Zanaga et al., 2022). https://doi.org/10.5281/zenodo.7254221"
+lineage: "GEE asset ESA/WorldCover/v200 -> clip to site -> class area fractions -> land cover composition indicator"
+siteintel_indicator: []   # TODO: fill from your services
+research_question: []     # TODO: map to Section 1 research questions

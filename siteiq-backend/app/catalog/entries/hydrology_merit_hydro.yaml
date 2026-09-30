@@ -1,0 +1,27 @@
+id: hydrology.merit_hydro
+dataset: "MERIT Hydro"
+# VERIFY: exact band names available in the GEE asset (especially the HAND band).
+variable: "Elevation (elv), flow direction (dir), upstream area (upa), height above nearest drainage (hnd)"
+producer: "Yamazaki et al., University of Tokyo"
+access_url: "https://developers.google.com/earth-engine/datasets/catalog/MERIT_Hydro_v1_0_1"
+# VERIFY: license terms. NC means non-commercial: review before any commercial use or resale of derived reports.
+license: "CC BY-NC 4.0"
+version: "v1.0.1"
+spatial_extent: global
+spatial_resolution: "3 arc-second (about 90 m at the equator)"
+crs: "EPSG:4326"
+temporal_resolution: static
+units: "metres (elv, hnd); km2 (upa); categorical (dir)"
+bands_variables: [elv, dir, upa, hnd]
+limitations:
+  - "About 90 m resolution misses small drainage features and narrow channels"
+  - "Built on a global DEM with vertical error, largest in flat and densely vegetated terrain"
+  - "HAND-based flood sensitivity is a screening proxy, not hydraulic flood modelling"
+  - "Static: does not reflect drainage or land surface changes after the source data date"
+  - "Non-commercial license constrains commercial use"
+confidence: medium
+confidence_rationale: "Well-validated global hydrography, but resolution and DEM error make it suitable for screening only, not engineering-grade flood assessment."
+provenance: "Yamazaki et al. (2019), MERIT Hydro: a high-resolution global hydrography map based on latest topography datasets, Water Resources Research."
+lineage: "GEE asset MERIT/Hydro/v1_0_1 -> extract HAND and upstream area at site -> flood sensitivity class"
+siteintel_indicator: []   # TODO: fill from your services
+research_question: []     # TODO: map to Section 1 research questions

@@ -5,7 +5,18 @@ from app.api import climate, flood, health, landcover, osm, report, soil, terrai
 from app.dependencies import CORS_ALLOW_ORIGIN_REGEX
 from app.api.sentinel2 import router as sentinel2_router
 
-app = FastAPI(title="Site Intelligence API")
+from contextlib import asynccontextmanager
+from app.catalog.loader import get_catalog
+from app.catalog.router import router as catalog_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_catalog()  # raises CatalogError at startup if any entry is invalid
+    yield
+
+
+app = FastAPI(title="Site Intelligence API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,3 +42,4 @@ app.include_router(environmental.router)
 
 app.include_router(sentinel2_router)
 
+app.include_router(catalog_router)

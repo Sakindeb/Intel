@@ -1,5 +1,10 @@
 import requests
 
+from app.catalog.provenance import build_provenance
+from app.catalog.runtime import record_failure, record_success
+
+CLIMATE_ENTRY_ID = "climate.nasa_power"
+
 # ── NASA POWER endpoints ──────────────────────────────────────────────────────
 # Monthly endpoint: dates must be YYYYMM, NOT YYYYMMDD  ← this was the 422 cause
 NASA_POWER_MONTHLY_URL = "https://power.larc.nasa.gov/api/temporal/monthly/point"
@@ -14,7 +19,7 @@ MONTHS_3L        = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT",
 NASA_START_YEAR = 2014
 NASA_END_YEAR   = 2023
 
-_HEADERS = {"User-Agent": "construction-site-intel/0.1 (student project)"}
+_HEADERS = {"User-Agent": "construction-site-intel/0.1"}
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -140,7 +145,7 @@ def _fetch_climatology(lat: float, lon: float) -> dict:
     resp.raise_for_status()
     raw = resp.json()["properties"]["parameter"]
 
-    # Climatology response uses 3-letter month keys (JAN, FEB, …) + ANN
+    # Climatology response uses 3-letter month keys (JAN, FEB, …)  ANN
     vars_by_month = {
         v: [
             float(raw[v].get(m, 0)) for m in MONTHS_3L
@@ -160,19 +165,39 @@ def fetch_climate_solar(lat: float, lon: float) -> dict:
     Fallback: NASA POWER climatology endpoint if monthly fails for any reason.
     """
     try:
-        return _fetch_monthly(lat, lon)
+        result = _fetch_monthly(lat, lon)
     except Exception as monthly_err:
+        record_failure(CLIMATE_ENTRY_ID, f"monthly endpoint: {monthly_err}")
         try:
             result = _fetch_climatology(lat, lon)
-            # Annotate so callers know which source was used
-            result["fallback"] = True
-            result["fallback_reason"] = str(monthly_err)
-            return result
         except Exception as clim_err:
-            # Both failed — re-raise the climatology error (more informative)
+            record_failure(
+                CLIMATE_ENTRY_ID,
+                f"monthly: {monthly_err} | climatology fallback: {clim_err}",
+            )
             raise RuntimeError(
                 f"Monthly endpoint: {monthly_err} | Climatology fallback: {clim_err}"
             ) from clim_err
+        # Annotate so callers know which source was used
+        result["fallback"] = True
+        result["fallback_reason"] = str(monthly_err)
+        result["provenance"] = build_provenance(
+            CLIMATE_ENTRY_ID,
+            processing_script="climate_service.fetch_climate_solar:v1",
+            spatial_filter=f"POINT({lon} {lat})",
+            parameters={"endpoint_used": "climatology_fallback"},
+        )
+        return result
+    else:
+        record_success(CLIMATE_ENTRY_ID)
+        result["fallback"] = False
+        result["provenance"] = build_provenance(
+            CLIMATE_ENTRY_ID,
+            processing_script="climate_service.fetch_climate_solar:v1",
+            spatial_filter=f"POINT({lon} {lat})",
+            parameters={"endpoint_used": "monthly"},
+        )
+        return result
 
 def get_holdridge_inputs(lat: float, lon: float) -> tuple[list[float], float]:
     """

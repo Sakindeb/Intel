@@ -1,0 +1,28 @@
+id: climate.nasa_power
+dataset: "NASA POWER"
+variable: "Daily meteorology and solar parameters (e.g. temperature, precipitation, solar radiation)"
+producer: "NASA Langley Research Center POWER Project"
+access_url: "https://power.larc.nasa.gov/docs/services/api/"
+# VERIFY: current POWER data-use terms and recommended acknowledgment text.
+license: "NASA open data; free to use, acknowledgment requested"
+# VERIFY: current API version and source datasets in use.
+version: "POWER API (source data: MERRA-2 and CERES; record the API version in use)"
+spatial_extent: global
+# VERIFY: grid sizes for the parameters you request.
+spatial_resolution: "About 0.5 x 0.625 degrees (meteorology); coarser for solar (about 1 degree)"
+crs: "EPSG:4326"
+temporal_coverage: "1981-present (varies by parameter)"
+temporal_resolution: daily
+units: "Varies by parameter (e.g. degrees C, mm/day, kWh/m2/day)"
+bands_variables: []   # TODO: list the exact POWER parameter codes your service requests
+limitations:
+  - "Coarse grid (tens of km): values are grid-cell averages and miss local microclimate, especially near highlands, coasts and lakes"
+  - "Reanalysis and satellite-blended estimates, not station measurements"
+  - "Precipitation can deviate from gauge data, particularly for convective tropical rainfall"
+  - "Live API: subject to rate limits, timeouts and outages"
+confidence: medium
+confidence_rationale: "Consistent, well-documented global climate baseline, but grid resolution makes site-level values indicative rather than measured."
+provenance: "NASA Langley Research Center POWER Project, funded through the NASA Earth Science Applied Sciences Program."
+lineage: "POWER REST API request for site coordinates -> daily parameter series -> aggregated climate indicators"
+siteintel_indicator: []   # TODO: fill from your services
+research_question: []     # TODO: map to Section 1 research questions

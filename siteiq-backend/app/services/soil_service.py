@@ -5,17 +5,26 @@ import requests
 
 from app.services.gee import ISDA_CLAY, ISDA_OC, ISDA_PH, ISDA_SAND, ISDA_TEX
 from app.utils.helpers import RISK_COLORS, TEXTURE_META
+from app.catalog.provenance import build_provenance
+from app.catalog.runtime import record_failure, record_success
+
+SOIL_ENTRY_ID = "soil.isdasoil"
 
 
 def fetch_soil(lat: float, lon: float) -> dict:
     point = ee.Geometry.Point([lon, lat])
 
     # Sample each image separately to avoid band name collisions when stacking
-    clay_raw = ISDA_CLAY.reduceRegion(reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
-    sand_raw = ISDA_SAND.reduceRegion(reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
-    ph_raw   = ISDA_PH.reduceRegion(  reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
-    oc_raw   = ISDA_OC.reduceRegion(  reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
-    tex_raw  = ISDA_TEX.reduceRegion( reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("texture_0_20")
+    try:
+        clay_raw = ISDA_CLAY.reduceRegion(reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
+        sand_raw = ISDA_SAND.reduceRegion(reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
+        ph_raw   = ISDA_PH.reduceRegion(  reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
+        oc_raw   = ISDA_OC.reduceRegion(  reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("mean_0_20")
+        tex_raw  = ISDA_TEX.reduceRegion( reducer=ee.Reducer.first(), geometry=point, scale=30).getInfo().get("texture_0_20")
+    except ee.EEException as exc:
+        record_failure(SOIL_ENTRY_ID, exc)
+        raise
+    record_success(SOIL_ENTRY_ID)
 
     # Apply unit back-transforms per GEE catalog
     clay_pct = round(clay_raw / 10, 1)               if clay_raw is not None else None
@@ -24,7 +33,7 @@ def fetch_soil(lat: float, lon: float) -> dict:
     ph       = round(ph_raw   / 10, 1)               if ph_raw   is not None else None
     # OC back-transform: exp(raw/10) - 1 gives g/kg; ÷10 converts to %
     oc_pct   = round((math.exp(oc_raw / 10) - 1) / 10, 2) if oc_raw is not None else None
-    tex_int  = int(round(tex_raw))                   if tex_raw  is not None else None
+    tex_int  = int(round(tex_raw))                   if tex_raw is not None else None
 
     # Texture class interpretation
     tex_name, risk_level, risk_note = TEXTURE_META.get(tex_int, ("Unknown", "unknown", "Texture class not recognised."))
@@ -63,6 +72,12 @@ def fetch_soil(lat: float, lon: float) -> dict:
             "high_clay":       (clay_pct or 0) > 40,
             "high_oc":         (oc_pct  or 0) > 3,
         },
+        "provenance": build_provenance(
+            SOIL_ENTRY_ID,
+            processing_script="soil_service.fetch_soil:v1",
+            spatial_filter=f"POINT({lon} {lat})",
+            parameters={},
+        ),
     }
 
 
@@ -94,15 +109,19 @@ def fetch_soil_tile(lat: float, lon: float, radius_m: int, layer: str) -> bytes:
     }
     img = images[layer]
 
-    url = img.getThumbURL({
-        "region":     region,
-        "dimensions": [512, 512],
-        "format":     "png",
-        "min":        meta["min"],
-        "max":        meta["max"],
-        "palette":    meta["palette"],
-    })
-
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
+    try:
+        url = img.getThumbURL({
+            "region":     region,
+            "dimensions": [512, 512],
+            "format":     "png",
+            "min":        meta["min"],
+            "max":        meta["max"],
+            "palette":    meta["palette"],
+        })
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+    except (ee.EEException, requests.RequestException) as exc:
+        record_failure(SOIL_ENTRY_ID, exc)
+        raise
+    record_success(SOIL_ENTRY_ID)
     return resp.content
